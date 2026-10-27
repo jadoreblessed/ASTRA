@@ -1,0 +1,490 @@
+import { screens } from "@/lib/scene/screens";
+import { siteConfig } from "@/lib/site";
+
+/**
+ * Placeholder content for the home view, ported from the original helios
+ * components. Components take this via props — never by importing it directly.
+ */
+
+export interface HeroFormContent {
+  /** The contract chip: its label and what it reads until the mint is live. */
+  caLabel: string;
+  ca: string;
+  xLabel: string;
+  xHref: string;
+  submit: string;
+}
+
+/** An asset riding the hero orbit — a seed % change that then ticks live. */
+export interface OrbitTicker {
+  symbol: string;
+  change: number;
+}
+
+export interface HeroHud {
+  /** Left edge: the network, with a live slot counter. */
+  network: { index: string; label: string; value: string; live: string; slot: number };
+  /** Right edge: what's listed. */
+  assets: { index: string; label: string; value: number; breakdown: string };
+}
+
+export interface HeroContent {
+  /** Masthead top line — the white → haze half of the mirrored gradient. */
+  titleTop: string;
+  /** Masthead bottom line — the haze → white half. */
+  titleBottom: string;
+  subtitle: string;
+  /** The one token at the centre of the orbit. */
+  token: { symbol: string; caption: string };
+  /** Every market, in orbit around it. */
+  orbit: OrbitTicker[];
+  hud: HeroHud;
+  form: HeroFormContent;
+}
+
+const form: HeroFormContent = {
+  caLabel: "CA",
+  ca: "coming soon",
+  xLabel: "ASTRA on X",
+  xHref: "https://x.com/astra",
+  submit: "Open the app",
+};
+
+export const hero: HeroContent = {
+  titleTop: "Every market.",
+  titleBottom: "Pulled into one.",
+  subtitle:
+    "Tokenized stocks, crypto and memecoins — one token you hold and redeem in your own wallet. Gravity does the rest.",
+  token: { symbol: "$ASTRA", caption: "1 token" },
+  orbit: [
+    { symbol: "NVDAx", change: 2.4 },
+    { symbol: "SOL", change: 3.1 },
+    { symbol: "BONK", change: -1.8 },
+    { symbol: "AAPLx", change: 0.6 },
+    { symbol: "wBTC", change: 1.2 },
+    { symbol: "WIF", change: 5.3 },
+    { symbol: "SPYx", change: 0.4 },
+    { symbol: "GOOGLx", change: -0.7 },
+  ],
+  hud: {
+    network: {
+      index: "01",
+      label: "Network",
+      value: "Solana mainnet",
+      live: "Live",
+      slot: 312_889_014,
+    },
+    assets: {
+      index: "02",
+      label: "Assets listed",
+      value: 133,
+      breakdown: "62 stocks · 41 crypto · 30 memes",
+    },
+  },
+  form,
+};
+
+export interface HeroNavContent {
+  /** Accessible name for the logo home control. */
+  wordmark: string;
+  links: NavItem[];
+  ctaLabel: string;
+}
+
+/**
+ * Top navigation for the getLayers hero redesign (Figma 665:1694). Replaces the
+ * original fixed `Header` on the home view. The link labels are the design's;
+ * their targets map onto the existing case-study sections.
+ */
+export const heroNav: HeroNavContent = {
+  wordmark: "Astra",
+  links: [
+    { label: "Home", target: screens.HERO },
+    { label: "Baskets", target: screens.SITEMAP },
+    { label: "How it works", target: screens.ROADMAP },
+    { label: "Proof", target: screens.IMPACT },
+  ],
+  ctaLabel: "Open the app",
+};
+
+export interface ServiceItem {
+  /** Bracketed mono index, e.g. "01". */
+  index: string;
+  title: string;
+  caption: string;
+  /** The count-up readout beside the index: value, suffix, unit. */
+  stat: { value: number; suffix: string; unit: string };
+  /** A mono line of what's actually inside. */
+  tickers: string;
+}
+
+export interface ServicesContent {
+  /** Masthead top line — white → haze half of the mirrored gradient. */
+  titleTop: string;
+  /** Masthead bottom line — haze → white half. */
+  titleBottom: string;
+  /** Left-hand feature column (left-aligned). */
+  left: ServiceItem[];
+  /** Right-hand feature column (right-aligned). */
+  right: ServiceItem[];
+  /** Mono readout under the burst. */
+  center: string;
+  footnote: string;
+}
+
+/**
+ * Services section — the getLayers redesign of the second slide (Figma
+ * 668:1825). A two-line masthead over a four-cell feature grid (two columns of
+ * two), footed by a centred line of copy.
+ */
+export const services: ServicesContent = {
+  titleTop: "Tokenized.",
+  titleBottom: "Held as one.",
+  left: [
+    {
+      index: "01",
+      title: "Stocks",
+      caption: "Built to hold",
+      stat: { value: 62, suffix: "", unit: "listed" },
+      tickers: "NVDAx · AAPLx · SPYx · GOOGLx · TSLAx",
+    },
+    {
+      index: "03",
+      title: "Memecoins",
+      caption: "The whole meta",
+      stat: { value: 30, suffix: "", unit: "listed" },
+      tickers: "BONK · WIF · POPCAT · MEW · FARTCOIN",
+    },
+  ],
+  right: [
+    {
+      index: "02",
+      title: "Crypto",
+      caption: "Always on",
+      stat: { value: 41, suffix: "", unit: "listed" },
+      tickers: "wBTC · SOL · ETH · JUP · JTO",
+    },
+    {
+      index: "04",
+      title: "Redeemable",
+      caption: "Any time",
+      stat: { value: 24, suffix: "/7", unit: "redemption" },
+      tickers: "burn 1 share → every token back",
+    },
+  ],
+  center: "133 assets · 1 token · 0 lockups",
+  footnote:
+    "We pull stocks, crypto and memecoins into a single token you can hold, send and redeem — priced live, routed for the best fill, yours on-chain.",
+};
+
+export interface TimelineStep {
+  /** Two-digit index shown in the gradient numeral, e.g. "01". */
+  index: string;
+  title: string;
+  body: string;
+  /** The hard fact under the step, in mono. */
+  meta: string;
+}
+
+export interface TimelineContent {
+  /** Masthead top line — white → haze half of the mirrored gradient. */
+  titleTop: string;
+  /** Masthead bottom line — haze → white half. */
+  titleBottom: string;
+  /** Label on the live step counter, e.g. "Step". */
+  counterLabel: string;
+  /** Right-hand readout opposite the counter. */
+  total: string;
+  steps: TimelineStep[];
+}
+
+/**
+ * Timeline section — the getLayers redesign of the third slide (Figma 669:1927):
+ * the studio's engagement as a horizontal rail that scrolls right-to-left across
+ * the whole scene. The copy is written to follow on from the hero ("give brands
+ * gravity") and services (Identity / Motion / Art Direction / Web).
+ */
+export const timeline: TimelineContent = {
+  titleTop: "From many",
+  titleBottom: "to one.",
+  counterLabel: "Step",
+  total: "Two approvals · end to end",
+  steps: [
+    {
+      index: "01",
+      title: "Log in",
+      body: "Email makes you a Solana wallet, keys yours to export. Phantom and Solflare work too.",
+      meta: "email → wallet · ~3s",
+    },
+    {
+      index: "02",
+      title: "Pick",
+      body: "Choose a ready basket or build your own from 133 stocks, cryptos and memecoins.",
+      meta: "up to 14 of 133 assets",
+    },
+    {
+      index: "03",
+      title: "Pay",
+      body: "USDC or SOL. Every swap is price-limited and routed for the best on-chain fill.",
+      meta: "usdc / sol · price-limited",
+    },
+    {
+      index: "04",
+      title: "Hold",
+      body: "One token in your own wallet — send it or hold it like any other asset.",
+      meta: "1 token · your wallet",
+    },
+    {
+      index: "05",
+      title: "Redeem",
+      body: "Burn the share, get the exact tokens back. Nobody can switch it off.",
+      meta: "burn → exact tokens",
+    },
+  ],
+};
+
+export interface SitemapChapter {
+  number: string;
+  title: string;
+  subtitle: string;
+  target: string;
+}
+
+export interface SitemapContent {
+  eyebrow: string;
+  heading: string;
+  ctaLabel: string;
+  /** Grouped exactly as the original: one, then two, then two. */
+  rows: SitemapChapter[][];
+}
+
+export const sitemap: SitemapContent = {
+  eyebrow: "Baskets",
+  heading: "Baskets you can hold today.",
+  ctaLabel: "Open the app →",
+  rows: [
+    [
+      {
+        number: "01",
+        title: "AI Supercycle",
+        subtitle: "GOOGLx, AVGOx, NVDAx and more",
+        target: screens.ROADMAP,
+      },
+    ],
+    [
+      {
+        number: "02",
+        title: "Onchain 80/20",
+        subtitle: "US equities against bitcoin",
+        target: screens.PARTNERS,
+      },
+      {
+        number: "03",
+        title: "Vision",
+        subtitle: "wBTC, SOL and Anthropic",
+        target: screens.PRODUCT,
+      },
+    ],
+    [
+      {
+        number: "04",
+        title: "Build your own",
+        subtitle: "Up to 14 of 133 assets",
+        target: screens.INVESTORS,
+      },
+      {
+        number: "05",
+        title: "Single tokens",
+        subtitle: "133 listed, $ASTRA included",
+        target: screens.SOCIAL,
+      },
+    ],
+  ],
+};
+
+export interface BriefPhase {
+  num: string;
+  kicker: string;
+  heading: string;
+  body: string;
+}
+
+export interface BriefContent {
+  chapter: string;
+  phases: BriefPhase[];
+}
+
+export const brief: BriefContent = {
+  chapter: "01 · Flow",
+  phases: [
+    {
+      num: "01",
+      kicker: "Approve",
+      heading: "One slide, two approvals",
+      body: "You check the transaction and slide to sign — one approval for the swaps, one for the mint, and only ever for ASTRA's own program on Solana.",
+    },
+    {
+      num: "02",
+      kicker: "Route",
+      heading: "Best price on every swap",
+      body: "Each swap is routed for the best on-chain fill and price-limited against a live quote. Miss the limit and nothing mints; the tokens already bought stay yours.",
+    },
+    {
+      num: "03",
+      kicker: "Settle",
+      heading: "One token, in your wallet",
+      body: "Your basket shares land in your own wallet in under a second. Redeem for the exact tokens inside at any time — nobody can switch it off.",
+    },
+  ],
+};
+
+export interface ImpactMetric {
+  value: string;
+  suffix?: string;
+  label: string;
+}
+
+export interface ImpactContent {
+  chapter: string;
+  heading: string;
+  metrics: ImpactMetric[];
+  foot: string;
+}
+
+export const impact: ImpactContent = {
+  chapter: "02 · Proof",
+  heading: "Measured on-chain, not promised.",
+  metrics: [
+    {
+      value: "100",
+      suffix: "%",
+      label: "Redeemable — nobody can switch it off",
+    },
+    {
+      value: ">10",
+      suffix: "%",
+      label: "Of $ASTRA supply already burned",
+    },
+    {
+      value: "133",
+      suffix: " assets",
+      label: "Stocks, crypto and memecoins listed",
+    },
+  ],
+  foot: "Every basket priced live, routed for the best on-chain fill, and yours to redeem.",
+};
+
+/**
+ * Logo scene (fourth slide) — the same hero composition, reused as the payoff:
+ * a two-line mirrored-gradient masthead and a subtitle framing the particle mark
+ * as it assembles. No contact form here — the mark is the closing statement.
+ */
+/** A proof readout flanking the assembling token: prefix + count-up + suffix. */
+export interface ProofStat {
+  index: string;
+  prefix: string;
+  value: number;
+  suffix: string;
+  label: string;
+}
+
+export interface LogoSceneContent {
+  /** Masthead top line — the white → haze half of the mirrored gradient. */
+  titleTop: string;
+  /** Masthead bottom line — the haze → white half. */
+  titleBottom: string;
+  subtitle: string;
+  /** Two proofs left of the token, two right. */
+  left: ProofStat[];
+  right: ProofStat[];
+  /** The hero's contact form, carried onto the closing scene. */
+  form: HeroFormContent;
+}
+
+export const logoScene: LogoSceneContent = {
+  titleTop: "The whole market.",
+  titleBottom: "In one token.",
+  subtitle:
+    "Every market pulled into a single token — held and redeemed in your own wallet.",
+  left: [
+    { index: "01", prefix: "", value: 100, suffix: "%", label: "Redeemable — nobody can switch it off" },
+    { index: "02", prefix: ">", value: 10, suffix: "%", label: "Of $ASTRA supply already burned" },
+  ],
+  right: [
+    { index: "03", prefix: "", value: 133, suffix: "", label: "Stocks, crypto and memecoins listed" },
+    { index: "04", prefix: "<", value: 2, suffix: " min", label: "Price freshness — or no trade" },
+  ],
+  form,
+};
+
+export interface NavItem {
+  label: string;
+  target: string;
+}
+
+export interface SocialLink {
+  label: string;
+  href: string;
+}
+
+export interface FooterContent {
+  wordmark: string;
+  tagline: string;
+  ctaLabel: string;
+  ctaHref: string;
+  nav: NavItem[];
+  social: SocialLink[];
+  copy: string;
+}
+
+export const footer: FooterContent = {
+  wordmark: "ASTRA",
+  tagline: "We give markets gravity — every market, in one token.",
+  ctaLabel: "Open the app",
+  ctaHref: "/app",
+  nav: [
+    { label: "Baskets", target: screens.SITEMAP },
+    { label: "How it works", target: screens.ROADMAP },
+    { label: "Proof", target: screens.IMPACT },
+  ],
+  social: [
+    { label: "Email", href: "mailto:hello@astra.xyz" },
+    { label: "Twitter", href: "https://twitter.com" },
+    { label: "Telegram", href: "https://telegram.org" },
+  ],
+  /* The year and the holder come from `siteConfig`, which is also what the
+   * JSON-LD `WebSite` node states — a footer that claims a different year to the
+   * structured data is the sort of thing nobody notices for two years. */
+  copy: `© ${siteConfig.copyrightYear} ${siteConfig.copyrightHolder} — All rights reserved`,
+};
+
+export interface HeaderContent {
+  wordmark: string;
+  navLabel: string;
+  ctaLabel: string;
+}
+
+export const header: HeaderContent = {
+  wordmark: "ASTRA",
+  navLabel: "Baskets",
+  ctaLabel: "Open the app",
+};
+
+export interface MenuContent {
+  eyebrow: string;
+  ctaLabel: string;
+  links: NavItem[];
+}
+
+/** Chapter labels shown in the mobile menu, from the original `section_links`. */
+export const menu: MenuContent = {
+  eyebrow: "Baskets",
+  ctaLabel: "Open the app",
+  links: [
+    { label: "AI Supercycle", target: screens.ROADMAP },
+    { label: "Onchain 80/20", target: screens.PARTNERS },
+    { label: "Vision", target: screens.PRODUCT },
+    { label: "Build your own", target: screens.INVESTORS },
+    { label: "Single tokens", target: screens.SOCIAL },
+  ],
+};
