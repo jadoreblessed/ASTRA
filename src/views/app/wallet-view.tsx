@@ -168,7 +168,7 @@ const LoginCard = () => {
             aria-label="Email"
             className={INPUT}
           />
-          <FancyButton type="submit" variant="light" size="lg" full>
+          <FancyButton type="submit" variant="primary" size="lg" full>
             {busy ? "Sending…" : "Continue with email"}
           </FancyButton>
         </form>
@@ -194,7 +194,7 @@ const LoginCard = () => {
               <span className="font-mono text-accent-200">{devCode}</span>
             </button>
           )}
-          <FancyButton type="submit" variant="light" size="lg" full>
+          <FancyButton type="submit" variant="primary" size="lg" full>
             {busy ? "Checking…" : "Log in"}
           </FancyButton>
           <Press mode="nudge-left" className="self-center">
@@ -337,7 +337,7 @@ const AccountCard = () => {
           </FancyButton>
         ))}
 
-      <FancyButton variant="light" full onClick={() => void logout()}>
+      <FancyButton variant="ghost" full onClick={() => void logout()}>
         Log out
       </FancyButton>
       {note && (

@@ -97,7 +97,7 @@ const Shell = () => {
                 {short(user.wallet)}
               </FancyButton>
             ) : (
-              <FancyButton variant="light" size="sm" onClick={() => go("wallet")}>
+              <FancyButton variant="primary" size="sm" onClick={() => go("wallet")}>
                 Log in
               </FancyButton>
             )}

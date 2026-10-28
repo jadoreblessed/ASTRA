@@ -7,30 +7,37 @@ import { animated, to, useReducedMotion, useSpring } from "@react-spring/web";
 import { useRobot } from "@/components/common/robot-view";
 
 /**
- * ASTRA's one button. Flat colours only; all the life is in the motion:
+ * ASTRA's one button — glass, in the X button's language. Flat colours only;
+ * all the life is in the motion:
  *
- *  - **Flood.** On hover a disc of the opposite colour swells out of the icon
- *    coin until it fills the pill, so the button turns itself inside out — the
- *    label and the coin swap colours with it.
+ *  - **Flood.** On hover a disc of the skin's flood colour swells out of the
+ *    point the pointer came in at until it fills the pill, and the label turns
+ *    to read on it — lilac for primary, ice-white for ghost.
  *  - **Roll.** The label rolls up and a fresh copy rolls in from below.
- *  - **Swap.** The arrow leaves the coin to the right as a new one slides in.
  *  - **Magnet.** The pill leans a few px toward the pointer, the label a touch
  *    further, so it feels held rather than hovered.
  *  - **Press.** It sinks a little under the click.
  *
  * Everything is a spring (hard rule #1); reduced motion and the robot form get
  * the colour swap with no travel. Renders a Next `Link` for internal paths, an
- * external `<a>` for URLs, otherwise a `<button>`.
+ * external `<a>` for URLs, otherwise a `<button>`. Icons are opt-in (the X).
  */
 
 type Variant = "primary" | "light" | "ghost";
 type Size = "sm" | "md" | "lg";
 type Icon = "arrow" | "plus" | "x" | "none";
 
+/**
+ * Two skins, both glass, both in the X button's language:
+ *  - primary (and `light`, kept as an alias): dark violet glass with a thin
+ *    lilac edge; floods lilac.
+ *  - ghost: dark glass with a white hairline; floods ice-white.
+ */
+const PRIMARY = { bg: "rgba(26, 20, 58, 0.55)", fg: "#efeaff", flood: "#d2bdff", floodFg: "#1a1238", coin: "rgba(210,189,255,0.16)", coinFg: "#efeaff", border: "rgba(210,189,255,0.6)" };
 const SKIN: Record<Variant, { bg: string; fg: string; flood: string; floodFg: string; coin: string; coinFg: string; border: string }> = {
-  primary: { bg: "#4977ff", fg: "#ffffff", flood: "#ffffff", floodFg: "#05060f", coin: "#ffffff", coinFg: "#05060f", border: "rgba(255,255,255,0)" },
-  light: { bg: "#ffffff", fg: "#05060f", flood: "#4977ff", floodFg: "#ffffff", coin: "#4977ff", coinFg: "#ffffff", border: "rgba(255,255,255,0)" },
-  ghost: { bg: "rgba(255,255,255,0.05)", fg: "#ffffff", flood: "#ffffff", floodFg: "#05060f", coin: "rgba(255,255,255,0.12)", coinFg: "#ffffff", border: "rgba(255,255,255,0.16)" },
+  primary: PRIMARY,
+  light: PRIMARY,
+  ghost: { bg: "rgba(255,255,255,0.05)", fg: "#e8edff", flood: "#e8edff", floodFg: "#05060f", coin: "rgba(255,255,255,0.12)", coinFg: "#e8edff", border: "rgba(255,255,255,0.16)" },
 };
 
 const HEIGHT: Record<Size, number> = { sm: 42, md: 48, lg: 56 };
@@ -81,7 +88,7 @@ export const FancyButton = ({
   type = "button",
   variant = "primary",
   size = "md",
-  icon = "arrow",
+  icon = "none",
   full = false,
   label,
   className = "",
@@ -96,14 +103,22 @@ export const FancyButton = ({
 
   const ref = useRef<HTMLSpanElement>(null);
   const [reach, setReach] = useState(8);
+  /** Where the flood starts: the point the pointer came in at. */
+  const [origin, setOrigin] = useState<{ x: number; y: number } | null>(null);
 
   const [{ t }, api] = useSpring(() => ({ t: 0, config: SPRING }));
   const [{ mx, my, press }, mag] = useSpring(() => ({ mx: 0, my: 0, press: 1, config: MAGNET }));
 
-  const enter = () => {
+  const enter = (e: React.PointerEvent) => {
     const box = ref.current?.getBoundingClientRect();
-    // Enough scale for the disc (coin-sized) to cover the far corner.
-    if (box) setReach((Math.hypot(box.width, box.height) * 2) / coin + 1);
+    if (box) {
+      // Flood out of the entry point, far enough to cover the farthest corner.
+      const x = iconOnly ? box.width / 2 : Math.min(box.width, Math.max(0, e.clientX - box.left));
+      const y = iconOnly ? box.height / 2 : Math.min(box.height, Math.max(0, e.clientY - box.top));
+      setOrigin({ x, y });
+      const far = Math.max(Math.hypot(x, y), Math.hypot(box.width - x, y), Math.hypot(x, box.height - y), Math.hypot(box.width - x, box.height - y));
+      setReach((far * 2) / coin + 1);
+    }
     api.start({ t: 1 });
   };
   const leave = () => {
@@ -133,8 +148,9 @@ export const FancyButton = ({
         style={{
           width: coin,
           height: coin,
-          top: (h - coin) / 2,
-          ...(icon !== "none" && !iconOnly ? { right: 5 } : { left: `calc(50% - ${coin / 2}px)` }),
+          ...(origin
+            ? { left: origin.x - coin / 2, top: origin.y - coin / 2 }
+            : { top: (h - coin) / 2, left: `calc(50% - ${coin / 2}px)` }),
           background: skin.flood,
           transform: t.to((v) => `scale(${(v * reach).toFixed(3)})`),
         }}
@@ -197,7 +213,7 @@ export const FancyButton = ({
     </>
   );
 
-  const shell = `relative isolate flex items-center overflow-hidden rounded-full font-mulish font-normal ${
+  const shell = `relative isolate flex items-center overflow-hidden rounded-full font-mulish font-normal backdrop-blur-[10px] ${
     iconOnly ? "justify-center" : icon === "none" ? "justify-center px-[24px]" : "justify-between gap-[14px] pr-[5px] pl-[24px]"
   } ${full ? "w-full" : ""}`;
   const shellStyle = {

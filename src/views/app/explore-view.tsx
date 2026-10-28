@@ -196,7 +196,7 @@ export const ExploreView = ({ content, onOpen, onCreate, onAssets }: ExploreView
             </dl>
           </Reveal>
           <Reveal delay={420} className="flex flex-wrap gap-[12px]">
-            <FancyButton variant="light" icon="plus" onClick={onCreate}>
+            <FancyButton onClick={onCreate}>
               Create a basket
             </FancyButton>
             <FancyButton variant="ghost" onClick={onAssets}>
@@ -253,7 +253,7 @@ export const ExploreView = ({ content, onOpen, onCreate, onAssets }: ExploreView
               <span aria-hidden="true" className="h-[16px] w-px bg-white/15" />
               <span className="font-mulish text-[15px] text-white/85">{content.token.ca}</span>
             </span>
-            <FancyButton variant="light">
+            <FancyButton variant="primary">
               Buy at launch
             </FancyButton>
           </div>
