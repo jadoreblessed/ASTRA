@@ -1,23 +1,96 @@
 "use client";
 
-import Link from "next/link";
+import { useEffect, useState } from "react";
+import { animated, useSpring } from "@react-spring/web";
 
-import { Hover } from "@/components/common/touch-hover";
+import { useRobot } from "@/components/common/robot-view";
 import type { HeroFormContent } from "@/data/mocks/home";
+import { FancyButton } from "@/components/ui/fancy-button";
+import { Press } from "@/components/ui/press";
+import { AstraMark } from "@/components/ui/astra-mark";
 
 /**
- * The frosted hero action pill — ASTRA's redesign of the original contact form.
+ * The hero action pill — the contract chip and X, nothing else (the app is one
+ * click away in the nav).
  *
- * A token page doesn't open with a name and an email, so the two inputs are
- * replaced by the two controls a launch actually leads with: the contract chip
- * (it reads "coming soon" until the mint is live) and the X link. The gradient
- * CTA stays — it is the one button every scene on the site lifts the same way.
+ * It hugs its content (no dead glass) inside a flat hairline, and stays alive at
+ * rest: the moon in the CA chip's mark keeps orbiting. Spring-driven (hard rule #1), still under reduced
+ * motion.
  *
- * `layout="row"` is the desktop inline pill; `layout="stack"` reflows full-width
- * for mobile and the closing scene. Every label comes from content.
+ * `layout="row"` is the desktop pill; `layout="stack"` reflows full-width for
+ * phones. Every label comes from content.
  */
 
-const HOVER = { tension: 320, friction: 22 } as const;
+const BORDER = "rgb(255 255 255 / 0.14)";
+
+/** Motion off: the robot form, or a reduced-motion preference. */
+const useStill = () => {
+  const robot = useRobot();
+  const [reduced, setReduced] = useState(false);
+  useEffect(() => {
+    setReduced(window.matchMedia("(prefers-reduced-motion: reduce)").matches);
+  }, []);
+  return robot || reduced;
+};
+
+/**
+ * The contract chip: the $ASTRA mark with its moon in orbit, the ticker, a CA
+ * badge and the address — "Coming soon" until the mint is live. Hover lights
+ * its edge; a click copies the address once there is one, and until then
+ * answers with a small shake and "Launching soon".
+ */
+const CaChip = ({ form, full }: { form: HeroFormContent; full: boolean }) => {
+  const still = useStill();
+  const live = form.ca.length >= 32;
+  const [note, setNote] = useState<string | null>(null);
+  const [hover, setHover] = useState(false);
+
+  const [{ edge, shake }, api] = useSpring(() => ({ edge: 0, shake: 0, config: { tension: 260, friction: 20 } }));
+
+  const enter = () => {
+    setHover(true);
+    if (!still) api.start({ edge: 1, config: { tension: 120, friction: 22 } });
+  };
+  const leave = () => {
+    setHover(false);
+    api.start({ edge: 0 });
+  };
+  const click = () => {
+    if (live) {
+      void navigator.clipboard?.writeText(form.ca).then(() => setNote("Copied"));
+    } else {
+      setNote("Launching soon");
+      if (!still) api.start({ from: { shake: 0 }, to: [{ shake: 1 }, { shake: -1 }, { shake: 0.6 }, { shake: 0 }], config: { tension: 900, friction: 18 } });
+    }
+    window.setTimeout(() => setNote(null), 1600);
+  };
+
+  return (
+    <animated.button
+      type="button"
+      onClick={click}
+      onPointerEnter={enter}
+      onPointerLeave={leave}
+      aria-label={live ? `Copy contract address ${form.ca}` : `Contract address: ${form.ca}`}
+      className={`flex h-[46px] items-center gap-[12px] rounded-full bg-white/[0.045] pr-[18px] pl-[6px] ${full ? "w-full justify-center" : "shrink-0"}`}
+      style={{
+        boxShadow: edge.to((v) => `inset 0 0 0 1px rgb(210 189 255 / ${(0.1 + 0.45 * v).toFixed(3)})`),
+        transform: shake.to((v) => `translateX(${(v * 5).toFixed(2)}px)`),
+      }}
+    >
+      <span aria-hidden="true" className="flex size-[34px] shrink-0 items-center justify-center rounded-full bg-[#0b0f22]">
+        <AstraMark size={26} live />
+      </span>
+      <span className="font-mulish text-[15px] leading-none text-white">$ASTRA</span>
+      <span className="rounded-full border border-accent-300/40 bg-accent-500/10 px-[8px] py-[4px] font-mono text-[13px] leading-none text-accent-200">
+        {form.caLabel}
+      </span>
+      <span className={`font-mulish text-[15px] leading-none ${hover || note ? "text-white" : "text-white/80"}`}>
+        {note ?? form.ca}
+      </span>
+    </animated.button>
+  );
+};
 
 export interface ContactFormProps {
   form: HeroFormContent;
@@ -27,88 +100,46 @@ export interface ContactFormProps {
 export const ContactForm = ({ form, layout = "row" }: ContactFormProps) => {
   const row = layout === "row";
 
-  const chip =
-    "flex items-center gap-[10px] rounded-[26px] border border-[color:var(--hero-glass-border)] text-white hover:bg-white/[0.06]";
-
   return (
     <div
-      className={
-        row
-          ? "flex items-center gap-[10px] rounded-[40px] border border-[color:var(--hero-glass-border)] bg-[var(--hero-glass)] p-[6px] pl-[14px] backdrop-blur-[8px]"
-          : "flex flex-col gap-[10px] rounded-[24px] border border-[color:var(--hero-glass-border)] bg-[var(--hero-glass)] p-[10px] backdrop-blur-[8px]"
-      }
+      className={row ? "rounded-full p-px" : "w-full rounded-[28px] p-px"}
+      style={{ background: BORDER }}
     >
-      {/* CA — reads "coming soon" until the mint is live. */}
       <div
-        aria-label={`Contract address: ${form.ca}`}
-        className={`flex items-center gap-[12px] rounded-[26px] border border-[color:var(--hero-glass-border)] font-mono leading-none ${row ? "shrink-0 px-[16px] py-[13px]" : "w-full justify-center px-[16px] py-[15px]"}`}
+        className={
+          row
+            ? "flex items-center gap-[8px] rounded-full bg-background/85 p-[6px] backdrop-blur-[10px]"
+            : "flex flex-col gap-[8px] rounded-[27px] bg-background/85 p-[8px] backdrop-blur-[10px]"
+        }
       >
-        <span className="text-[11px] tracking-[0.18em] text-white/40">{form.caLabel}</span>
-        <span aria-hidden="true" className="h-[12px] w-px bg-white/20" />
-        <span className="text-[12px] tracking-[0.08em] text-white/85 uppercase">{form.ca}</span>
+        {/* CA — reads "coming soon" until the mint is live. */}
+        <Press mode="lift" block={!row} className={row ? "shrink-0" : "w-full"}>
+          <CaChip form={form} full={!row} />
+        </Press>
+
+        {/* X. */}
+        {row ? (
+          <FancyButton
+            href={form.xHref}
+            variant="ghost"
+            size="md"
+            icon="x"
+            label={form.xLabel}
+            className="shrink-0"
+          />
+        ) : (
+          <FancyButton
+            href={form.xHref}
+            variant="ghost"
+            size="md"
+            icon="x"
+            label={form.xLabel}
+            full
+          >
+            Follow on X
+          </FancyButton>
+        )}
       </div>
-
-      {/* X. */}
-      <Hover
-        tag="div"
-        from={{ scale: 1 }}
-        to={{ scale: 1.06 }}
-        config={HOVER}
-        className={row ? "shrink-0" : "w-full"}
-      >
-        <a
-          href={form.xHref}
-          target="_blank"
-          rel="noopener noreferrer"
-          aria-label={form.xLabel}
-          className={`${chip} ${row ? "size-[44px] justify-center !rounded-full px-0" : "w-full justify-center px-[16px] py-[14px]"}`}
-        >
-          <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" className="size-[16px]">
-            <path d="M18 3h3l-7 8 8 10h-6l-5-6-5 6H3l7-9L2 3h6l4 5 6-5zm-1 16h2L8 5H6l11 14z" />
-          </svg>
-          {!row && <span className="font-mulish text-[15px]">Follow on X</span>}
-        </a>
-      </Hover>
-
-      {/* Open the app — the gradient CTA, unchanged. */}
-      <Hover
-        tag="div"
-        from={{ scale: 1 }}
-        to={{ scale: 1.03 }}
-        config={HOVER}
-        className={row ? "shrink-0" : "w-full"}
-      >
-        <Link
-          href="/app"
-          className={
-            row
-              ? "flex w-full shrink-0 items-center justify-center gap-[8px] rounded-[50px] py-[2px] pr-[26px] pl-[2px]"
-              : "flex w-full items-center justify-center gap-[10px] rounded-[50px] py-[6px] pr-[24px] pl-[6px]"
-          }
-          style={{ backgroundImage: "var(--gradient-hero-cta)" }}
-        >
-          <span className="relative block size-[39px] shrink-0">
-            <span className="absolute top-0 left-0 size-[39px] rounded-[50px] bg-white" />
-            <svg
-              viewBox="0 0 24 24"
-              fill="none"
-              aria-hidden="true"
-              className="absolute top-1/2 left-1/2 size-[23px] -translate-x-1/2 -translate-y-1/2"
-            >
-              <path
-                d="M9 6l6 6-6 6"
-                stroke="#05060F"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
-          </span>
-          <span className="font-mulish text-[16px] leading-[1.2] font-normal whitespace-nowrap text-white">
-            {form.submit}
-          </span>
-        </Link>
-      </Hover>
     </div>
   );
 };

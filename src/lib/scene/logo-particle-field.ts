@@ -25,7 +25,7 @@ import { useSceneConfig, type LogoConfig } from "./scene-config";
  * via `rebuild()`. The mark turns to follow the cursor, eased, with an optional
  * idle spin. Targets are sampled by rasterising the icon's two triangular
  * outlines to an offscreen canvas, then given depth so the flat mark reads as a
- * turning slab. Additive soft sprites tinted along the blue→lilac gradient.
+ * turning slab. Additive soft sprites, one flat colour per ring.
  */
 
 /** ASTRA's mark: the token — a coin's outer rim and fine inner rim, two
@@ -186,11 +186,12 @@ export class LogoParticleField {
         uPointScale: { value: 1 },
         uColorA: { value: new THREE.Color("#4977ff") },
         uColorB: { value: new THREE.Color("#d2bdff") },
+        uMark: { value: 1 },
       },
       vertexShader: /* glsl */ `
         attribute vec3 aTarget; attribute float aSeed; attribute float aSize;
         uniform float uProgress; uniform float uTime; uniform float uAlpha; uniform float uPointScale;
-        uniform vec3 uColorA; uniform vec3 uColorB;
+        uniform vec3 uColorA; uniform vec3 uColorB; uniform float uMark;
         varying vec3 vCol; varying float vB;
         #define TAU 6.2831853
 
@@ -204,9 +205,8 @@ export class LogoParticleField {
           p.x += sin(uTime * 0.7 + aSeed * TAU) * drift;
           p.y += cos(uTime * 0.6 + aSeed * TAU) * drift;
 
-          // Tint along the mark's blue→lilac gradient, by target x.
-          float g = clamp(aTarget.x * 0.13 + 0.5, 0.0, 1.0);
-          vCol = mix(uColorA, uColorB, g);
+          // Flat colour per ring: blue rim, lilac inner ring — no blend.
+          vCol = length(aTarget.xy) > 0.37 * uMark ? uColorA : uColorB;
 
           float tw = 0.7 + 0.3 * sin(uTime * 1.6 + aSeed * TAU);
           vB = aSize * tw * uAlpha;
@@ -255,6 +255,7 @@ export class LogoParticleField {
     u.uPointScale.value = c.pointSize;
     (u.uColorA.value as THREE.Color).set(c.colorA);
     (u.uColorB.value as THREE.Color).set(c.colorB);
+    u.uMark.value = c.markSize;
 
     // Cursor-driven tilt only — no idle spin. The mark turns to face the
     // pointer and eases back to its resting tilt when the pointer is still.

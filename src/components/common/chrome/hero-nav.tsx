@@ -1,11 +1,11 @@
 "use client";
 
 import { useCallback, useEffect, useId, useRef, useState } from "react";
-import Link from "next/link";
 import { animated, useSpring } from "@react-spring/web";
 
 import { Spring } from "@/components/common/robot-spring";
 import { Hover } from "@/components/common/touch-hover";
+import { AstraMark } from "@/components/ui/astra-mark";
 import { useSections } from "@/hooks/sections/use-sections";
 import { useScroll } from "@/hooks/smooth-scroll/use-scroll";
 import { useHeroLayout } from "@/hooks/use-hero-scale";
@@ -14,6 +14,7 @@ import { scrollToSection } from "@/utils/scroll-to-section";
 import { screens } from "@/lib/scene/screens";
 import { easeReveal } from "@/utils/animation/easing";
 import type { HeroNavContent } from "@/data/mocks/home";
+import { FancyButton } from "@/components/ui/fancy-button";
 
 import { HeroNavMenu, type MenuOrigin } from "./hero-nav-menu";
 
@@ -86,10 +87,7 @@ const HeroNavDesktop = ({ content }: HeroNavProps) => {
                 className={`flex h-[43px] items-center px-[24px] py-[12px] ${PILL}`}
               >
                 <span className="flex items-center gap-[10px]">
-                  <svg viewBox="0 0 24 24" width={20} height={20} fill="none" aria-hidden="true" className="shrink-0">
-                    <circle cx="12" cy="12" r="9" stroke="#9fb8ff" strokeWidth="1.4" />
-                    <circle cx="12" cy="12" r="5" stroke="#ff8fc4" strokeWidth="1.4" />
-                  </svg>
+                  <AstraMark size={24} live className="shrink-0" />
                   <span className="font-mulish text-[18px] leading-none font-normal tracking-[0.04em] text-white">
                     ASTRA
                   </span>
@@ -110,26 +108,12 @@ const HeroNavDesktop = ({ content }: HeroNavProps) => {
           >
             <ul className="flex items-center gap-[32px] font-mulish text-[16px] leading-[1.2] font-normal text-white">
               {content.links.map((link) => (
-                <Hover
-                  tag="li"
-                  key={link.label}
-                  from={{ opacity: 0.68, y: 0 }}
-                  to={{ opacity: 1, y: -1 }}
-                  config={HOVER}
-                >
-                  <button
-                    type="button"
-                    onClick={() => scrollToSection(link.target)}
-                    className="whitespace-nowrap"
-                  >
-                    {link.label}
-                  </button>
-                </Hover>
+                <NavLink key={link.label} label={link.label} onClick={() => scrollToSection(link.target)} />
               ))}
             </ul>
           </Spring>
 
-          {/* Gradient CTA. */}
+          {/* The CTA. */}
           <Spring
             tag="div"
             enabled={isLoaded}
@@ -138,25 +122,44 @@ const HeroNavDesktop = ({ content }: HeroNavProps) => {
             delayIn={320}
             config={NAV_REVEAL}
           >
-            <Hover tag="div" from={{ scale: 1 }} to={{ scale: 1.04 }} config={HOVER}>
-              <Link
-                href="/app"
-                className="flex items-center gap-[8px] rounded-[50px] px-[28px] py-[12px]"
-                style={{ backgroundImage: "var(--gradient-hero-cta)" }}
-              >
-                <span className="font-mulish text-[16px] leading-[1.2] font-normal whitespace-nowrap text-white">
-                  {content.ctaLabel}
-                </span>
-                <span
-                  aria-hidden="true"
-                  className="size-[3px] shrink-0 rounded-full bg-white"
-                />
-              </Link>
-            </Hover>
+            <FancyButton href="/app" size="sm" icon="none">
+              {content.ctaLabel}
+            </FancyButton>
           </Spring>
         </div>
       </div>
     </nav>
+  );
+};
+
+/* ------------------------------------------------------------------ links */
+
+/** A nav link: brightens and rises on hover while a hairline draws in under it. */
+const NavLink = ({ label, onClick }: { label: string; onClick: () => void }) => {
+  const [st, api] = useSpring(() => ({ t: 0, config: HOVER }));
+  return (
+    <li
+      className="relative"
+      onPointerEnter={() => api.start({ t: 1 })}
+      onPointerLeave={() => api.start({ t: 0 })}
+    >
+      <animated.button
+        type="button"
+        onClick={onClick}
+        className="whitespace-nowrap"
+        style={{
+          opacity: st.t.to((v) => 0.68 + 0.32 * v),
+          transform: st.t.to((v) => `translateY(${(-v * 1.5).toFixed(2)}px)`),
+        }}
+      >
+        {label}
+      </animated.button>
+      <animated.span
+        aria-hidden="true"
+        className="absolute -bottom-[5px] left-0 h-px w-full origin-left bg-accent-200"
+        style={{ transform: st.t.to((v) => `scaleX(${v.toFixed(3)})`) }}
+      />
+    </li>
   );
 };
 
@@ -284,10 +287,7 @@ const HeroNavMobile = ({ content }: HeroNavProps) => {
           className={`flex h-[44px] items-center px-[20px] ${PILL}`}
         >
           <span className="flex items-center gap-[9px]">
-            <svg viewBox="0 0 24 24" width={19} height={19} fill="none" aria-hidden="true" className="shrink-0">
-              <circle cx="12" cy="12" r="9" stroke="#9fb8ff" strokeWidth="1.4" />
-              <circle cx="12" cy="12" r="5" stroke="#ff8fc4" strokeWidth="1.4" />
-            </svg>
+            <AstraMark size={23} live className="shrink-0" />
             <span className="font-mulish text-[17px] leading-none font-normal tracking-[0.04em] text-white">
               ASTRA
             </span>

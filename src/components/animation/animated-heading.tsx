@@ -29,7 +29,7 @@ const CONFIG = { duration: 1100, easing: easeReveal } as const;
 
 /** Gradient endpoints: opaque white → the haze (`#c8d6ff` at 0.2), as in the CSS. */
 const OPAQUE = [255, 255, 255, 1] as const;
-const HAZE = [200, 214, 255, 0.2] as const;
+const HAZE = [255, 255, 255, 1] as const;
 
 const lerp = (a: number, b: number, t: number): number => a + (b - a) * t;
 

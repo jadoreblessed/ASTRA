@@ -12,6 +12,8 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // The backend has its own toolchain (server/tsconfig.json).
+    "server/**",
   ]),
   {
     rules: {

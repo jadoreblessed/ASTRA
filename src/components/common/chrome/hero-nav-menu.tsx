@@ -8,9 +8,9 @@ import {
 } from "@react-spring/web";
 import type { Ref } from "react";
 import { createPortal } from "react-dom";
-import Link from "next/link";
 
 import type { HeroNavContent } from "@/data/mocks/home";
+import { FancyButton } from "@/components/ui/fancy-button";
 
 /** The curtain opening — weighty, like the nav's own 1 s reveal. */
 const OPEN = { tension: 150, friction: 28 } as const;
@@ -179,19 +179,9 @@ const MenuPanel = ({
 
       <div className="relative mt-[40px] overflow-hidden">
         <animated.div style={rise(content.links.length)}>
-          <Link
-            href="/app"
-            className="flex h-[56px] w-full items-center justify-center gap-[10px] rounded-[50px]"
-            style={{ backgroundImage: "var(--gradient-hero-cta)" }}
-          >
-            <span className="font-mulish text-[17px] leading-none font-normal whitespace-nowrap text-white">
-              {content.ctaLabel}
-            </span>
-            <span
-              aria-hidden="true"
-              className="size-[3px] shrink-0 rounded-full bg-white"
-            />
-          </Link>
+          <FancyButton href="/app" size="lg" icon="none" full>
+            {content.ctaLabel}
+          </FancyButton>
         </animated.div>
       </div>
     </animated.div>,

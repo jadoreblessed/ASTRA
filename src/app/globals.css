@@ -78,16 +78,7 @@
      no area to say anything with, and the first pass — sweeping from 0.16 to 0.6 —
      came out as a muddy grey smudge with the crescent invisible. A brand mark this
      small has to state its colours outright. */
-  --gradient-logo-disc: conic-gradient(
-    from 200deg,
-    rgb(58 92 255 / 0.45) 0deg,
-    rgb(109 139 255 / 0.9) 62deg,
-    rgb(255 95 168 / 1) 116deg,
-    rgb(255 143 196 / 1) 150deg,
-    rgb(109 139 255 / 0.95) 200deg,
-    rgb(58 92 255 / 0.4) 290deg,
-    rgb(58 92 255 / 0.45) 360deg
-  );
+  --gradient-logo-disc: linear-gradient(#4977ff, #4977ff);
   --shadow-logo-mark: 0 0 10px -3px rgb(58 92 255 / 0.5);
   /* The inner rim: light crowding against the horizon, pink on the hot side. */
   --shadow-logo-core: 0 0 7px 0 rgb(255 95 168 / 0.45),
@@ -95,67 +86,38 @@
 
   /* Burger hover halo — the original's blurred `::before` radial glow, kept as
      a gradient token so the hover overlay only springs its opacity. */
-  --gradient-burger-glow: radial-gradient(
-    60% 60% at 50% 50%,
-    rgb(58 92 255 / 0.35),
-    rgb(58 92 255 / 0) 70%
-  );
+  --gradient-burger-glow: linear-gradient(rgb(255 255 255 / 0.08), rgb(255 255 255 / 0.08));
 
   /* Footer base wash + hairline top rule, from the original Footer.scss. The
      wash's two near-black stops are a hair darker than `--surface-deep`, so they
      stay literal rather than derive from it. */
-  --gradient-footer: linear-gradient(
-    180deg,
-    rgb(2 4 13 / 0) 0%,
-    rgb(3 7 22 / 0.86) 26%,
-    #030716 100%
-  );
-  --gradient-footer-rule: linear-gradient(
-    90deg,
-    rgb(58 92 255 / 0) 0%,
-    rgb(255 95 168 / 0.3) 50%,
-    rgb(58 92 255 / 0) 100%
-  );
+  --gradient-footer: linear-gradient(#030716, #030716);
+  --gradient-footer-rule: linear-gradient(rgb(255 255 255 / 0.1), rgb(255 255 255 / 0.1));
 
   /* getLayers hero redesign (Figma 665:1694). The masthead is two lines set in
      mirror-image horizontal gradients: the first fades white → pale-blue haze
      left-to-right, the second runs the same two stops the other way, so the
      bright end of each line points at the other. `#c8d6ff` at 0.2 alpha is the
      haze stop; pure white is the hot end. */
-  --gradient-hero-title: linear-gradient(
-    90deg,
-    #ffffff 0%,
-    rgb(200 214 255 / 0.2) 100%
-  );
-  --gradient-hero-title-inv: linear-gradient(
-    90deg,
-    rgb(200 214 255 / 0.2) 0%,
-    #ffffff 100%
-  );
+  --gradient-hero-title: linear-gradient(#ffffff, #ffffff);
+  --gradient-hero-title-inv: linear-gradient(#ffffff, #ffffff);
 
   /* The pill CTAs (nav + contact form) share one blue→violet→near-black sweep;
      the two Figma angles (106.951deg / 107.892deg) are a rounding artefact of
      the export, unified here to 107deg. */
-  --gradient-hero-cta: linear-gradient(
-    107deg,
-    #4977ff 0%,
-    #331574 51.442%,
-    #000315 100%
-  );
+  --gradient-hero-cta: linear-gradient(#4977ff, #4977ff);
 
   /* The phone menu (D-036): the deep space the vortex lives in, lit from the
      burger's corner by the CTA's own blue → violet, and a faint lilac floor. */
   --hero-menu-ground: #000315;
-  --gradient-hero-menu:
-    radial-gradient(120% 70% at 100% 0%, rgb(73 119 255 / 0.34) 0%, rgb(51 21 116 / 0.22) 38%, transparent 72%),
-    radial-gradient(90% 50% at 0% 100%, rgb(210 189 255 / 0.12) 0%, transparent 70%);
+  --gradient-hero-menu: none;
   --hero-menu-rule: rgb(255 255 255 / 0.12);
   /* The menu's foot (D-037): the design's 32px, plus the home indicator's
      safe area when the page reaches it (`viewportFit: "cover"`). */
   --hero-menu-pad-bottom: max(32px, calc(env(safe-area-inset-bottom, 0px) + 32px));
 
   /* Icon mark stroke — the twin triangles' blue→lilac gradient. */
-  --gradient-hero-icon: linear-gradient(120deg, #4977ff 0%, #d2bdff 100%);
+  --gradient-hero-icon: linear-gradient(#d2bdff, #d2bdff);
 
   /* The frosted-glass chrome shared by every hero pill: an 80%-black fill and a
      hairline white border, floated over the vortex with an 8px backdrop blur. */
@@ -167,25 +129,13 @@
      burst rather than boxing it in. The left column runs blue (`#4564e5`), the
      right column its lilac counterpart (`#cfbaff`) — the two stops the Figma
      export flattened onto the two sides. */
-  --gradient-service-rule: linear-gradient(
-    90deg,
-    #4564e5 0%,
-    rgb(69 100 229 / 0) 100%
-  );
-  --gradient-service-rule-alt: linear-gradient(
-    90deg,
-    rgb(207 186 255 / 0) 0%,
-    #cfbaff 100%
-  );
+  --gradient-service-rule: linear-gradient(rgb(255 255 255 / 0.12), rgb(255 255 255 / 0.12));
+  --gradient-service-rule-alt: linear-gradient(rgb(255 255 255 / 0.12), rgb(255 255 255 / 0.12));
 
   /* Timeline rail (Figma 669:1927). The horizontal baseline is a faint blue
      hairline; each station's vertical tick fades up from it into the dark. */
   --timeline-rail: rgb(120 150 255 / 0.22);
-  --gradient-timeline-tick: linear-gradient(
-    180deg,
-    rgb(73 119 255 / 0) 0%,
-    rgb(73 119 255 / 0.55) 100%
-  );
+  --gradient-timeline-tick: linear-gradient(rgb(73 119 255 / 0.35), rgb(73 119 255 / 0.35));
 }
 
 @theme inline {

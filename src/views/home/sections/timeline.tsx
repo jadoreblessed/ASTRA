@@ -14,6 +14,8 @@ import { useIsMobile } from "@/hooks/use-is-mobile";
 import { screens } from "@/lib/scene/screens";
 import type { TimelineContent, TimelineStep } from "@/data/mocks/home";
 
+import { StepFlow } from "./step-flow";
+
 /**
  * Timeline — the getLayers redesign of the third slide (Figma node 669:1927).
  *
@@ -24,24 +26,26 @@ import type { TimelineContent, TimelineStep } from "@/data/mocks/home";
  * across the whole scene via `useSlideProgress` (which reads the slide's local
  * scroll progress off the shared ticker).
  *
- * Each station is a tick rising from a shared baseline with a triangular marker
- * at its foot, a gradient index numeral, a Mulish title, and a line of body copy.
- * The masthead (mirror-image gradients, reusing the hero tokens) stays centred at
- * the top while the rail travels beneath it. The shared fixed `HeroNav` is the
- * section's nav.
+ * Each station is a card standing on a shared baseline over a triangular
+ * marker: the step drawn as coins (email → a Solana wallet, USDC/SOL → the
+ * basket's assets, many → one, one → many) with a dot running the rails between
+ * them, a big index, the title, a line of copy and a fact pill. The rail runs
+ * under a fixed playhead at the left, and the card passing it stands forward —
+ * lifts, lights its edge and index, its marker swells and fills — while the rest
+ * sit back. On a phone the same story runs down a list of cards. The
+ * shared fixed `HeroNav` is the section's nav.
  */
 
 
-/* Design-pixel geometry, straight off the Figma frame. */
-const FIRST_X = 73; // left edge of the first station's content
-const STEP_GAP = 605; // horizontal pitch between stations
-const CONTENT_TOP = 579;
-const GROUP_WIDTH = 204; // index + title column
-const ITEM_WIDTH = 405; // body wrap width
-const TICK_OFFSET = 20; // tick sits this far left of the content
-const TICK_HEIGHT = 174;
+/* Design-pixel geometry on the 1440×800 frame. */
+const FIRST_X = 73; // left edge of the first card
+const STEP_GAP = 560; // horizontal pitch between cards
+const ITEM_WIDTH = 470; // card width
+const TICK_OFFSET = -40; // the marker sits this far in from the card's left edge
 const BASELINE_Y = 754;
 const TRI_SIZE = 19;
+/** The card's foot: just above its marker, joined to it by a short tick. */
+const CARD_FOOT = BASELINE_Y - TRI_SIZE - 20;
 const SIDE_MARGIN = 73; // trailing margin past the last station
 
 const STATION_REVEAL = { duration: 1200, easing: easeReveal } as const;
@@ -59,18 +63,32 @@ interface StationProps {
   step: TimelineStep;
   x: number;
   index: number;
+  count: number;
   enabled: boolean;
+  progress: ReturnType<typeof useSlideProgress>;
 }
 
-const Station = ({ step, x, index, enabled }: StationProps) => {
+/** How lit a station is: full on the one the rail is at, dimmer the farther off. */
+const focusAt = (p: number, index: number, count: number) =>
+  Math.max(0.3, 1 - Math.abs(p * (count - 1) - index) * 0.6);
+
+/** The same, as 0 (sitting back) → 1 (the one at the playhead). */
+const standAt = (p: number, index: number, count: number) =>
+  (focusAt(p, index, count) - 0.3) / 0.7;
+
+/** How far the fill has run past station `index`: 0 not reached → 1 passed. */
+const passedAt = (p: number, index: number, count: number) =>
+  Math.min(1, Math.max(0, p * (count - 1) - index + 1));
+
+const Station = ({ step, x, index, count, enabled, progress }: StationProps) => {
   const tickX = x - TICK_OFFSET;
-  const gradientId = `timeline-tri-${index}`;
   /* Each station drifts up softly, staggered along the rail. */
   const delayIn = 200 + index * 120;
+  const stand = (p: number) => standAt(p, index, count);
 
   return (
     <>
-      {/* Vertical tick rising from the baseline. */}
+      {/* Short tick from the card's foot down to its marker. */}
       <Spring
         tag="div"
         aria-hidden="true"
@@ -80,15 +98,10 @@ const Station = ({ step, x, index, enabled }: StationProps) => {
         to={{ opacity: 1, scaleY: 1 }}
         delayIn={delayIn}
         config={STATION_REVEAL}
-        className="absolute w-px origin-bottom"
-        style={{
-          left: tickX,
-          top: CONTENT_TOP,
-          height: TICK_HEIGHT,
-          backgroundImage: "var(--gradient-timeline-tick)",
-        }}
+        className="absolute w-px origin-bottom bg-accent-200/40"
+        style={{ left: tickX, top: CARD_FOOT, height: BASELINE_Y - TRI_SIZE - CARD_FOOT }}
       />
-      {/* Triangular marker, centred on the tick, sitting on the baseline. */}
+      {/* Triangular marker on the baseline: swells at the playhead, fills once passed. */}
       <Spring
         tag="div"
         aria-hidden="true"
@@ -101,59 +114,63 @@ const Station = ({ step, x, index, enabled }: StationProps) => {
         className="absolute"
         style={{ left: tickX - TRI_SIZE / 2, top: BASELINE_Y - TRI_SIZE }}
       >
-        <svg
+        <animated.svg
           width={TRI_SIZE}
           height={TRI_SIZE}
           viewBox="0 0 19 19"
           fill="none"
-          className="block"
+          className="block origin-bottom overflow-visible"
+          style={{ transform: progress.to((p) => `scale(${(0.85 + 0.45 * stand(p)).toFixed(3)})`) }}
         >
-          <path d="M9.5 0L19 19H0L9.5 0Z" fill={`url(#${gradientId})`} />
-          <defs>
-            <linearGradient
-              id={gradientId}
-              x1="0"
-              y1="0"
-              x2="19"
-              y2="19"
-              gradientUnits="userSpaceOnUse"
-            >
-              <stop stopColor="#4977FF" />
-              <stop offset="1" stopColor="#D2BDFF" />
-            </linearGradient>
-          </defs>
-        </svg>
+          <path d="M9.5 1.5L17.6 18H1.4L9.5 1.5Z" stroke="#D2BDFF" strokeWidth="1.4" strokeLinejoin="round" />
+          <animated.path
+            d="M9.5 1.5L17.6 18H1.4L9.5 1.5Z"
+            fill="#D2BDFF"
+            style={{ opacity: progress.to((p) => passedAt(p, index, count)) }}
+          />
+        </animated.svg>
       </Spring>
 
-      {/* Content — index, title, body — to the right of the tick. */}
+      {/* The step's card. */}
       <Spring
         tag="div"
         enabled={enabled}
         mode="once"
-        from={{ opacity: 0, y: 26, filter: "blur(8px)" }}
+        from={{ opacity: 0, y: 40, filter: "blur(10px)" }}
         to={{ opacity: 1, y: 0, filter: "blur(0px)" }}
         delayIn={delayIn + 120}
         config={STATION_REVEAL}
-        className="absolute flex flex-col gap-[18px]"
-        style={{ left: x, top: CONTENT_TOP, width: ITEM_WIDTH }}
+        className="absolute"
+        style={{ left: x, bottom: 800 - CARD_FOOT, width: ITEM_WIDTH }}
       >
-        <div
-          className="flex flex-col gap-[12px]"
-          style={{ width: GROUP_WIDTH }}
+        {/* At the playhead the card stands forward and lights its edge; the rest sit back. */}
+        <animated.div
+          className="flex origin-bottom flex-col gap-[20px] rounded-[28px] border bg-background/85 p-[30px]"
+          style={{
+            opacity: progress.to((p) => 0.4 + 0.6 * stand(p)),
+            borderColor: progress.to((p) => `rgb(210 189 255 / ${(0.08 + 0.42 * stand(p)).toFixed(3)})`),
+            transform: progress.to(
+              (p) => `translateY(${((1 - stand(p)) * 18).toFixed(2)}px) scale(${(0.95 + 0.05 * stand(p)).toFixed(4)})`,
+            ),
+          }}
         >
-          <p className="m-0 bg-[image:var(--gradient-hero-icon)] bg-clip-text font-mulish text-[16px] leading-[1.2] font-normal text-transparent [-webkit-background-clip:text]">
-            {step.index}
+          <div className="flex items-center justify-between gap-[16px]">
+            <StepFlow flow={step.flow} size={36} />
+            <animated.span
+              className="font-mono text-[46px] leading-none"
+              style={{
+                color: progress.to((p) => `rgb(210 189 255 / ${(0.2 + 0.8 * stand(p)).toFixed(3)})`),
+              }}
+            >
+              {step.index}
+            </animated.span>
+          </div>
+          <p className="m-0 font-mulish text-[36px] leading-none font-light text-white">{step.title}</p>
+          <p className="m-0 font-mulish text-[16px] leading-[1.4] font-normal text-white/75">{step.body}</p>
+          <p className="m-0 w-fit rounded-full border border-accent-400/30 bg-accent-500/10 px-[14px] py-[8px] font-mulish text-[14px] leading-none text-accent-200">
+            {step.meta}
           </p>
-          <p className="m-0 font-mulish text-[32px] leading-none font-light text-white">
-            {step.title}
-          </p>
-        </div>
-        <p className="m-0 font-mulish text-[16px] leading-[1.2] font-normal text-white/85">
-          {step.body}
-        </p>
-        <p className="m-0 w-fit border border-white/12 px-[10px] py-[7px] font-mono text-[11px] leading-none tracking-[0.12em] text-accent-300 uppercase">
-          {step.meta}
-        </p>
+        </animated.div>
       </Spring>
     </>
   );
@@ -217,7 +234,7 @@ const TimelineMobile = ({ content, revealed, progress }: TimelineMobileProps) =>
             // test's timeline drops. Promoted, the move is a composite.
             willChange: "transform",
           }}
-          className="absolute inset-x-0 top-0 flex flex-col gap-[24px]"
+          className="absolute inset-x-0 top-0 flex flex-col gap-[18px] pb-[12px]"
         >
           {content.steps.map((step, i) => (
             <Spring
@@ -229,49 +246,59 @@ const TimelineMobile = ({ content, revealed, progress }: TimelineMobileProps) =>
               to={{ opacity: 1, y: 0, filter: "blur(0px)" }}
               delayIn={160 + i * 90}
               config={STATION_REVEAL}
-              className="flex gap-[16px]"
+              className="flex gap-[14px]"
             >
-              <div className="flex w-[18px] shrink-0 flex-col items-center pt-[6px]">
-                <svg
-                  width="14"
-                  height="14"
-                  viewBox="0 0 19 19"
-                  fill="none"
-                  aria-hidden="true"
-                  className="shrink-0"
-                >
-                  <path d="M9.5 0L19 19H0L9.5 0Z" fill={`url(#tl-m-tri-${i})`} />
-                  <defs>
-                    <linearGradient
-                      id={`tl-m-tri-${i}`}
-                      x1="0"
-                      y1="0"
-                      x2="19"
-                      y2="19"
-                      gradientUnits="userSpaceOnUse"
-                    >
-                      <stop stopColor="#4977FF" />
-                      <stop offset="1" stopColor="#D2BDFF" />
-                    </linearGradient>
-                  </defs>
-                </svg>
-                <span className="mt-[8px] w-px flex-1 bg-[color:var(--timeline-rail)]" />
+              {/* Node + the rail down to the next one, filling as you scroll. */}
+              <div aria-hidden="true" className="flex w-[16px] shrink-0 flex-col items-center pt-[20px]">
+                <span className="relative flex size-[16px] shrink-0 items-center justify-center rounded-full border-[1.5px] border-accent-200">
+                  <animated.span
+                    className="size-[8px] rounded-full bg-accent-200"
+                    style={{
+                      transform: progress.to((p) => `scale(${passedAt(p, i, content.steps.length).toFixed(3)})`),
+                    }}
+                  />
+                </span>
+                {i < content.steps.length - 1 && (
+                  <span className="relative mt-[6px] -mb-[18px] w-[2px] flex-1 overflow-hidden rounded-full bg-white/10">
+                    <animated.span
+                      className="absolute inset-0 origin-top bg-accent-200"
+                      style={{
+                        transform: progress.to(
+                          (p) => `scaleY(${passedAt(p, i + 1, content.steps.length).toFixed(3)})`,
+                        ),
+                      }}
+                    />
+                  </span>
+                )}
               </div>
 
-              <div className="flex flex-col gap-[6px] pb-[6px]">
-                <p className="m-0 bg-[image:var(--gradient-hero-icon)] bg-clip-text font-mulish text-[14px] leading-none font-normal text-transparent [-webkit-background-clip:text]">
-                  {step.index}
-                </p>
-                <p className="m-0 font-mulish text-[22px] leading-none font-light text-white">
+              {/* The step's card — the one being read stands forward. */}
+              <animated.div
+                className="flex flex-1 flex-col gap-[8px] rounded-[20px] border border-white/[0.09] bg-background/80 px-[18px] py-[16px]"
+                style={{
+                  opacity: progress.to((p) => 0.45 + 0.55 * standAt(p, i, content.steps.length)),
+                  borderColor: progress.to(
+                    (p) => `rgb(210 189 255 / ${(0.08 + 0.32 * standAt(p, i, content.steps.length)).toFixed(3)})`,
+                  ),
+                  transform: progress.to(
+                    (p) => `scale(${(0.97 + 0.03 * standAt(p, i, content.steps.length)).toFixed(4)})`,
+                  ),
+                }}
+              >
+                <div className="flex items-center justify-between gap-[12px]">
+                  <StepFlow flow={step.flow} size={26} />
+                  <span className="font-mono text-[22px] leading-none text-accent-200">{step.index}</span>
+                </div>
+                <p className="m-0 mt-[4px] font-mulish text-[22px] leading-none font-light text-white">
                   {step.title}
                 </p>
-                <p className="m-0 font-mulish text-[15px] leading-[1.35] font-normal text-white/80">
+                <p className="m-0 font-mulish text-[15px] leading-[1.4] font-normal text-white/75">
                   {step.body}
                 </p>
-                <p className="m-0 mt-[4px] w-fit border border-white/12 px-[8px] py-[5px] font-mono text-[10px] leading-none tracking-[0.12em] text-accent-300 uppercase">
+                <p className="m-0 mt-[4px] w-fit rounded-full border border-accent-400/30 bg-accent-500/10 px-[12px] py-[7px] font-mulish text-[13px] leading-none text-accent-200">
                   {step.meta}
                 </p>
-              </div>
+              </animated.div>
             </Spring>
           ))}
         </animated.ol>
@@ -353,34 +380,23 @@ export const Timeline = ({ content }: TimelineProps) => {
             to={{ opacity: 1, x: 0 }}
             delayIn={260}
             config={STATION_REVEAL}
-            className="absolute top-[112px] left-[50px] flex w-[230px] flex-col gap-[14px] font-mono text-[11px] leading-none tracking-[0.16em] uppercase"
+            className="absolute top-[108px] left-[50px] flex w-[240px] flex-col gap-[16px] font-mulish leading-none"
           >
             <div className="flex items-baseline gap-[10px]">
-              <span className="text-white/40">{content.counterLabel}</span>
-              <animated.span className="text-[26px] tracking-normal text-white tabular-nums">
+              <animated.span className="font-mono text-[34px] font-normal text-white tabular-nums">
                 {progress.to((p) => pad(stepAt(p, steps.length)))}
               </animated.span>
-              <span className="text-white/40">/ {pad(steps.length)}</span>
+              <span className="font-mono text-[17px] text-white/40">/ {pad(steps.length)}</span>
             </div>
-            <span className="relative block h-px w-full bg-white/15">
+            <span className="relative block h-[2px] w-full overflow-hidden rounded-full bg-white/12">
               <animated.span
-                className="absolute inset-0 origin-left bg-accent-300"
-                style={{ transform: progress.to((p) => `scaleX(${p.toFixed(3)})`) }}
+                className="absolute inset-0 origin-left rounded-full"
+                style={{
+                  backgroundImage: "var(--gradient-hero-icon)",
+                  transform: progress.to((p) => `scaleX(${Math.max(0.02, p).toFixed(3)})`),
+                }}
               />
             </span>
-          </Spring>
-
-          <Spring
-            tag="p"
-            enabled={revealed}
-            mode="once"
-            from={{ opacity: 0, x: 16 }}
-            to={{ opacity: 1, x: 0 }}
-            delayIn={320}
-            config={STATION_REVEAL}
-            className="absolute top-[118px] right-[50px] m-0 text-right font-mono text-[11px] leading-none tracking-[0.16em] text-white/50 uppercase"
-          >
-            [ {content.total} ]
           </Spring>
 
           {/* The rail — a wide track that travels right-to-left with scroll. */}
@@ -423,11 +439,27 @@ export const Timeline = ({ content }: TimelineProps) => {
                 key={step.index}
                 step={step}
                 index={i}
+                count={steps.length}
                 x={FIRST_X + i * STEP_GAP}
                 enabled={revealed}
+                progress={progress}
               />
             ))}
           </animated.div>
+
+          {/* The playhead: fixed while the rail runs beneath it. */}
+          <Spring
+            tag="div"
+            aria-hidden="true"
+            enabled={revealed}
+            mode="once"
+            from={{ opacity: 0, scale: 0 }}
+            to={{ opacity: 1, scale: 1 }}
+            delayIn={400}
+            config={STATION_REVEAL}
+            className="absolute size-[11px] rounded-full border-2 border-background bg-accent-200"
+            style={{ left: FIRST_X - TICK_OFFSET - 5.5, top: BASELINE_Y - 5 }}
+          />
         </div>
         )}
       </animated.div>

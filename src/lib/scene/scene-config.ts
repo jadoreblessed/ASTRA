@@ -223,37 +223,18 @@ const clone = <T>(v: T): T => JSON.parse(JSON.stringify(v));
 export const applyTokensToCss = (t: TokenConfig): void => {
   if (typeof document === "undefined") return;
   const root = document.documentElement.style;
-  const haze = rgba(t.titleHaze, 0.2);
+  /* Flat on purpose: every "gradient" token is one colour, kept as an image
+     value so the background-image call sites stay untouched. */
+  const flat = (c: string) => `linear-gradient(${c}, ${c})`;
 
-  root.setProperty(
-    "--gradient-hero-title",
-    `linear-gradient(90deg, #ffffff 0%, ${haze} 100%)`,
-  );
-  root.setProperty(
-    "--gradient-hero-title-inv",
-    `linear-gradient(90deg, ${haze} 0%, #ffffff 100%)`,
-  );
-  root.setProperty(
-    "--gradient-hero-cta",
-    `linear-gradient(107deg, ${t.brandBlue} 0%, ${t.ctaMid} 51.442%, ${t.ctaEnd} 100%)`,
-  );
-  root.setProperty(
-    "--gradient-hero-icon",
-    `linear-gradient(120deg, ${t.brandBlue} 0%, ${t.brandLilac} 100%)`,
-  );
-  root.setProperty(
-    "--gradient-service-rule",
-    `linear-gradient(90deg, ${t.ruleBlue} 0%, ${rgba(t.ruleBlue, 0)} 100%)`,
-  );
-  root.setProperty(
-    "--gradient-service-rule-alt",
-    `linear-gradient(90deg, ${rgba(t.ruleLilac, 0)} 0%, ${t.ruleLilac} 100%)`,
-  );
+  root.setProperty("--gradient-hero-title", flat("#ffffff"));
+  root.setProperty("--gradient-hero-title-inv", flat("#ffffff"));
+  root.setProperty("--gradient-hero-cta", flat(t.brandBlue));
+  root.setProperty("--gradient-hero-icon", flat(t.brandLilac));
+  root.setProperty("--gradient-service-rule", flat("rgb(255 255 255 / 0.12)"));
+  root.setProperty("--gradient-service-rule-alt", flat("rgb(255 255 255 / 0.12)"));
   root.setProperty("--timeline-rail", rgba(t.rail, 0.22));
-  root.setProperty(
-    "--gradient-timeline-tick",
-    `linear-gradient(180deg, ${rgba(t.brandBlue, 0)} 0%, ${rgba(t.brandBlue, 0.55)} 100%)`,
-  );
+  root.setProperty("--gradient-timeline-tick", flat(rgba(t.brandBlue, 0.35)));
 };
 
 /* ---------------------------------------------------------------------- store */

@@ -6,30 +6,43 @@ import { getMouseCoords, hasPointer } from "@/lib/scene/mouse";
 import { Lerp } from "@/lib/scene/easing";
 import { color } from "@/lib/scene/palette";
 import { useSceneConfig, type LogoConfig } from "@/lib/scene/scene-config";
+import { PLANET_GLSL } from "@/lib/planet";
 
 /**
- * ASTRA's mark, assembled from particles — inside the main scene (not a separate
+ * ASTRA's planet, assembled from particles — inside the main scene (not a separate
  * canvas), riding a fixed distance in front of the camera so its size is constant
  * while the dive flies right into it. It shares the one starfield, camera and
  * bloom: one continuous scene.
  *
- * The mark is the token itself — a coin, every market pulled into one: a broad
- * outer rim and a fine inner rim, two annuli that spin independently about the
- * centre (rim slow, inner rim faster) so the coin shimmers as it turns. Each
- * particle is tagged `aTri` so the shader can turn the two apart. Once assembled
- * the motes keep a gentle continuous flow, and a loose cloud of background motes
- * drifts chaotically behind the mark, fading in with it. Motes fly IN from the
- * frame edges to build it.
+ * The token is a Jupiter in the site's colours (`lib/planet`): motes on a globe,
+ * each wearing its band's flat colour, the belts turning at their own speeds so
+ * the pink storm drifts against its neighbours. A thin haze hangs off the limb,
+ * a ring of motes circles the equator — three flat bands with a dark gap between
+ * them, the far side slipping behind the globe — and two moons ride beyond it.
+ * The whole system leans toward the viewer so the ring reads as an ellipse.
+ * Motes fly IN from the frame edges to build it — every market pulled into one.
+ * `aTri` tags each mote: 0 globe, 1 haze, 2 ring, 3–4 the moons.
  */
 
-/** The coin's outer rim (an annulus): outer circle minus inner, filled even-odd. */
-const TRIANGLE_OUTER =
-  "M122,62 A60,60 0 1,0 2,62 A60,60 0 1,0 122,62 Z M113,62 A51,51 0 1,0 11,62 A51,51 0 1,0 113,62 Z";
-/** The coin's inner rim — a fine annulus inside the face. */
-const TRIANGLE_INNER =
-  "M103,62 A41,41 0 1,0 21,62 A41,41 0 1,0 103,62 Z M99,62 A37,37 0 1,0 25,62 A37,37 0 1,0 99,62 Z";
-const ICON_VB_W = 124;
-const ICON_VB_H = 125;
+/** Globe radius as a share of `markSize` — smaller now the ring needs the room. */
+const PLANET = 0.32;
+/** The axial tilt, radians (the brand mark leans the same way). */
+const TILT = -0.28;
+/** How far the system leans toward the viewer, radians — opens the ring up. */
+const LEAN = 0.36;
+const MOONS = 2;
+/** Motes per moon, before the tier scale. */
+const MOON_COUNT = 90;
+/** Share of the motes in the haze off the limb. */
+const HAZE_SHARE = 0.05;
+/** Share of the motes in the ring. */
+const RING_SHARE = 0.3;
+/** The ring's bands, in globe radii: inner faint band, the bright one, the gap, the outer. */
+const RING_BANDS = [
+  [1.38, 1.56],
+  [1.56, 1.84],
+  [1.92, 2.18],
+] as const;
 
 const MAX_COUNT = 24000;
 /** How far in front of the camera the mark rides (fixes its on-screen size). */
@@ -114,65 +127,51 @@ class LogoMark {
       size[i] = 0.5 + Math.random() * Math.random() * 1.7;
     }
 
+    // Targets: the moons' motes last, then the ring, the haze; the globe takes the rest.
+    const R = c.markSize * PLANET;
+    const moonEach = Math.max(40, Math.round(MOON_COUNT * COUNT_SCALE[deviceTier()]));
+    const moonFrom = n - moonEach * MOONS;
+    const ringFrom = moonFrom - Math.round(n * RING_SHARE);
+    const hazeFrom = ringFrom - Math.round(n * HAZE_SHARE);
+    for (let i = 0; i < n; i++) {
+      // A uniform point on the unit sphere.
+      const y = Math.random() * 2 - 1;
+      const a = Math.random() * Math.PI * 2;
+      const ring = Math.sqrt(1 - y * y);
+      let rad: number;
+      if (i >= moonFrom) {
+        const k = Math.floor((i - moonFrom) / moonEach);
+        tri[i] = 3 + k;
+        rad = (0.14 + k * 0.04) * Math.cbrt(Math.random()) * R * 0.32;
+      } else if (i >= ringFrom) {
+        // A flat annulus in the equatorial plane; the bright band gets the most.
+        tri[i] = 2;
+        const pick = Math.random();
+        const [lo, hi] = RING_BANDS[pick < 0.2 ? 0 : pick < 0.68 ? 1 : 2];
+        const r = R * (lo + Math.random() * (hi - lo));
+        target[i * 3] = Math.cos(a) * r;
+        target[i * 3 + 1] = (Math.random() - 0.5) * R * 0.025;
+        target[i * 3 + 2] = Math.sin(a) * r;
+        continue;
+      } else if (i >= hazeFrom) {
+        tri[i] = 1;
+        rad = R * (1.03 + Math.random() * 0.14);
+      } else {
+        tri[i] = 0;
+        rad = R * (0.99 + Math.random() * 0.02);
+      }
+      target[i * 3] = Math.cos(a) * ring * rad;
+      target[i * 3 + 1] = y * rad;
+      target[i * 3 + 2] = Math.sin(a) * ring * rad;
+    }
+
     const geometry = new THREE.BufferGeometry();
     geometry.setAttribute("position", new THREE.BufferAttribute(start, 3));
     geometry.setAttribute("aTarget", new THREE.BufferAttribute(target, 3));
     geometry.setAttribute("aSeed", new THREE.BufferAttribute(seed, 1));
     geometry.setAttribute("aSize", new THREE.BufferAttribute(size, 1));
     geometry.setAttribute("aTri", new THREE.BufferAttribute(tri, 1));
-    this.sampleTargets(geometry, n, c);
     return geometry;
-  }
-
-  /** Rasterise each triangle on its own, tag particles, and scatter their targets. */
-  private sampleTargets(
-    geometry: THREE.BufferGeometry,
-    n: number,
-    c: LogoConfig,
-  ): void {
-    const scale = 4;
-    const w = Math.round(ICON_VB_W * scale);
-    const h = Math.round(ICON_VB_H * scale);
-
-    const raster = (path: string): number[] => {
-      const canvas = document.createElement("canvas");
-      canvas.width = w;
-      canvas.height = h;
-      const ctx = canvas.getContext("2d");
-      if (!ctx) return [];
-      ctx.scale(scale, scale);
-      ctx.fillStyle = "#fff";
-      ctx.fill(new Path2D(path), "evenodd");
-      const data = ctx.getImageData(0, 0, w, h).data;
-      const list: number[] = [];
-      for (let i = 3; i < data.length; i += 4) {
-        if (data[i] > 40) list.push((i - 3) / 4);
-      }
-      return list;
-    };
-
-    const outer = raster(TRIANGLE_OUTER);
-    const inner = raster(TRIANGLE_INNER);
-    if (outer.length === 0 || inner.length === 0) return;
-
-    const target = geometry.getAttribute("aTarget") as THREE.BufferAttribute;
-    const tri = geometry.getAttribute("aTri") as THREE.BufferAttribute;
-    const arr = target.array as Float32Array;
-    const triArr = tri.array as Float32Array;
-
-    for (let i = 0; i < n; i++) {
-      const useOuter = i % 2 === 0; // even split across the two triangles
-      const list = useOuter ? outer : inner;
-      triArr[i] = useOuter ? 0 : 1;
-      const pixel = list[(Math.random() * list.length) | 0];
-      const px = pixel % w;
-      const py = (pixel / w) | 0;
-      arr[i * 3] = (px / w - 0.5) * c.markSize;
-      arr[i * 3 + 1] = -(py / h - 0.5) * c.markSize;
-      arr[i * 3 + 2] = (Math.random() - 0.5) * c.thickness;
-    }
-    target.needsUpdate = true;
-    tri.needsUpdate = true;
   }
 
   rebuild(): void {
@@ -192,41 +191,91 @@ class LogoMark {
         uAlpha: { value: 0 },
         uPointScale: { value: 1 },
         uViewScale: { value: 1 },
-        uColorA: { value: new THREE.Color("#4977ff") },
-        uColorB: { value: new THREE.Color("#d2bdff") },
+        uR: { value: 4 },
       },
       vertexShader: /* glsl */ `
         attribute vec3 aTarget; attribute float aSeed; attribute float aSize; attribute float aTri;
         uniform float uProgress; uniform float uTime; uniform float uAlpha; uniform float uPointScale; uniform float uViewScale;
-        uniform vec3 uColorA; uniform vec3 uColorB;
+        uniform float uR;
         varying vec3 vCol; varying float vB;
         #define TAU 6.2831853
+        ${PLANET_GLSL}
         void main() {
           float e = smoothstep(0.0, 1.0, clamp(uProgress * 1.35 - aSeed * 0.35, 0.0, 1.0));
 
-          // Each rim spins about the coin's centre — the outer slow, the inner
-          // faster, so the face shimmers as it turns.
-          float speed = (aTri < 0.5) ? 0.30 : 0.62;
-          float a = uTime * speed;
-          float cs = cos(a), sn = sin(a);
-          vec3 tgt = aTarget;
-          tgt.xy = mat2(cs, -sn, sn, cs) * aTarget.xy;
+          vec3 tgt;
+          vec3 col;
+          float glow = 1.0;
+          if (aTri < 1.5) {
+            // Globe and haze: spin about the axis, each band at its own speed.
+            float rad = length(aTarget);
+            vec3 d = aTarget / rad;
+            float lon = atan(d.x, d.z);
+            float b = d.y + 0.035 * sin(lon * 3.0 + d.y * 9.0) + 0.02 * sin(lon * 7.0 - d.y * 5.0);
+            float L = lon + uTime * bandSpeed(b);
+            float cl = sqrt(max(0.0, 1.0 - d.y * d.y));
+            tgt = vec3(cl * sin(L), d.y, cl * cos(L)) * rad;
+            if (aTri < 0.5) {
+              col = bandColor(b);
+              float dl = atan(sin(lon - SPOT_LON), cos(lon - SPOT_LON));
+              float sy = (d.y - SPOT_LAT) / SPOT_H;
+              if ((dl / SPOT_W) * (dl / SPOT_W) + sy * sy < 1.0) col = SPOT_COL;
+              glow = 0.55;
+            } else {
+              col = vec3(0.784, 0.839, 1.0);
+              glow = 0.09 + 0.05 * sin(uTime * 1.3 + aSeed * 20.0);
+            }
+          } else if (aTri < 2.5) {
+            // The ring: turns slowly about the axis, one flat colour per band.
+            float rr = length(aTarget.xz) / uR;
+            float a = atan(aTarget.z, aTarget.x) + uTime * (0.16 / rr);
+            tgt = vec3(cos(a) * rr * uR, aTarget.y, sin(a) * rr * uR);
+            if (rr < 1.56) { col = vec3(0.427, 0.545, 1.0); glow = 0.16; }
+            else if (rr < 1.88) { col = vec3(0.910, 0.929, 1.0); glow = 0.3; }
+            else { col = vec3(0.725, 0.651, 1.0); glow = 0.22; }
+          } else {
+            // A moon: its own little ball of motes, out past the ring.
+            float k = aTri - 3.0;
+            float orbit = uR * (2.42 + k * 0.3);
+            float th = uTime * (0.3 - k * 0.08) + k * 2.6;
+            tgt = vec3(cos(th) * orbit, 0.0, sin(th) * orbit) + aTarget;
+            col = vec3(0.875, 0.902, 1.0);
+            glow = 0.2;
+          }
+
+          // Lean the system toward the viewer (opens the ring into an ellipse),
+          // then the axial tilt in the screen plane.
+          float cl2 = cos(${LEAN.toFixed(3)});
+          float sl2 = sin(${LEAN.toFixed(3)});
+          tgt.yz = mat2(cl2, sl2, -sl2, cl2) * tgt.yz;
+          float ct = cos(${TILT.toFixed(3)});
+          float st = sin(${TILT.toFixed(3)});
+          tgt.xy = mat2(ct, st, -st, ct) * tgt.xy;
+
+          // What the globe hides: its own far side, and ring or moon behind it.
+          float z = tgt.z / uR;
+          float vis = 1.0;
+          if (aTri < 0.5) {
+            vis = mix(1.0, smoothstep(-0.12, 0.15, z), e);
+            glow *= 0.12 + 0.88 * clamp(z, 0.0, 1.0);
+          } else if (aTri < 1.5) {
+            vis = mix(1.0, smoothstep(-0.7, 0.0, z), e);
+          } else if (tgt.z < 0.0 && length(tgt.xy) < uR * 1.02) {
+            vis = 1.0 - e;
+          }
 
           vec3 p = mix(position, tgt, e);
 
-          // A continuous flow once assembled, and a wider drift while flying in.
-          float idle = e;
-          p.x += sin(uTime * 0.9 + aSeed * TAU) * 0.12 * idle;
-          p.y += cos(uTime * 0.8 + aSeed * TAU * 1.3) * 0.12 * idle;
-          p.z += sin(uTime * 0.7 + aSeed * 30.0) * 0.10 * idle;
+          // A faint shimmer once formed, and a wider drift while flying in.
+          p.x += sin(uTime * 0.9 + aSeed * TAU) * 0.025 * e;
+          p.y += cos(uTime * 0.8 + aSeed * TAU * 1.3) * 0.025 * e;
           float drift = (1.0 - e) * 0.5;
           p.x += sin(uTime * 0.6 + aSeed * TAU) * drift;
           p.y += cos(uTime * 0.55 + aSeed * TAU) * drift;
 
-          float g = clamp(aTarget.x * 0.13 + 0.5, 0.0, 1.0);
-          vCol = mix(uColorA, uColorB, g);
-          float tw = 0.7 + 0.3 * sin(uTime * 1.6 + aSeed * TAU);
-          vB = aSize * tw * uAlpha;
+          vCol = col;
+          float tw = 0.8 + 0.2 * sin(uTime * 1.6 + aSeed * TAU);
+          vB = aSize * tw * uAlpha * glow * vis;
 
           vec4 mv = modelViewMatrix * vec4(p, 1.0);
           gl_PointSize = clamp(aSize * uPointScale * uViewScale * (300.0 / -mv.z), 0.4, 9.0);
@@ -330,8 +379,10 @@ class LogoMark {
     u.uTime.value = time;
     u.uPointScale.value = c.pointSize * this.markSizeScale;
     u.uViewScale.value = vs;
-    (u.uColorA.value as THREE.Color).set(c.colorA);
-    (u.uColorB.value as THREE.Color).set(c.colorB);
+    u.uR.value = c.markSize * PLANET;
+    // A tall screen has no width to spare: shrink the planet (not the drifting
+    // background) so it clears the proofs set above it on a phone.
+    this.points.scale.setScalar(Math.min(1, Math.max(0.62, (window.innerWidth / window.innerHeight) * 1.05)));
 
     const bu = this.bgMaterial.uniforms;
     bu.uTime.value = time;

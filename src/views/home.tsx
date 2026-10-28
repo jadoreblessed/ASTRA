@@ -15,6 +15,7 @@ import { Hero } from "@/views/home/sections/hero";
 import { Services } from "@/views/home/sections/services";
 import { Timeline } from "@/views/home/sections/timeline";
 import { LogoParticles } from "@/views/home/sections/logo-particles";
+import { CoinFlight } from "@/views/home/sections/coin-flight";
 
 import { screens, sectionRoutes, type SectionRoute } from "@/lib/scene/screens";
 import { isPageForm, pageForms } from "@/lib/page-forms";
@@ -71,6 +72,7 @@ export const HomeView = ({
         {section && <SectionDeepLink target={section} />}
 
         <HeroNav content={content.heroNav} />
+        <CoinFlight coins={[...content.hero.orbit.outer, ...content.hero.orbit.inner]} />
 
         <main className="relative w-full">
           {/* Each slide's height in viewports is the scroll length its scene morph

@@ -12,20 +12,14 @@ export interface HeroFormContent {
   ca: string;
   xLabel: string;
   xHref: string;
-  submit: string;
 }
 
-/** An asset riding the hero orbit — a seed % change that then ticks live. */
-export interface OrbitTicker {
+/** An asset riding the hero orbit, drawn as its logo coin. */
+export interface OrbitAsset {
   symbol: string;
-  change: number;
-}
-
-export interface HeroHud {
-  /** Left edge: the network, with a live slot counter. */
-  network: { index: string; label: string; value: string; live: string; slot: number };
-  /** Right edge: what's listed. */
-  assets: { index: string; label: string; value: number; breakdown: string };
+  /** Glyph key for `AssetLogo`; omitted for a lettered coin. */
+  logo?: string;
+  mark?: string;
 }
 
 export interface HeroContent {
@@ -35,19 +29,17 @@ export interface HeroContent {
   titleBottom: string;
   subtitle: string;
   /** The one token at the centre of the orbit. */
-  token: { symbol: string; caption: string };
-  /** Every market, in orbit around it. */
-  orbit: OrbitTicker[];
-  hud: HeroHud;
+  token: { symbol: string };
+  /** Every market, in orbit around it — the wide ring and the tight one. */
+  orbit: { outer: OrbitAsset[]; inner: OrbitAsset[] };
   form: HeroFormContent;
 }
 
 const form: HeroFormContent = {
   caLabel: "CA",
-  ca: "coming soon",
+  ca: "Coming soon",
   xLabel: "ASTRA on X",
   xHref: "https://x.com/astra",
-  submit: "Open the app",
 };
 
 export const hero: HeroContent = {
@@ -55,31 +47,25 @@ export const hero: HeroContent = {
   titleBottom: "Pulled into one.",
   subtitle:
     "Tokenized stocks, crypto and memecoins — one token you hold and redeem in your own wallet. Gravity does the rest.",
-  token: { symbol: "$ASTRA", caption: "1 token" },
-  orbit: [
-    { symbol: "NVDAx", change: 2.4 },
-    { symbol: "SOL", change: 3.1 },
-    { symbol: "BONK", change: -1.8 },
-    { symbol: "AAPLx", change: 0.6 },
-    { symbol: "wBTC", change: 1.2 },
-    { symbol: "WIF", change: 5.3 },
-    { symbol: "SPYx", change: 0.4 },
-    { symbol: "GOOGLx", change: -0.7 },
-  ],
-  hud: {
-    network: {
-      index: "01",
-      label: "Network",
-      value: "Solana mainnet",
-      live: "Live",
-      slot: 312_889_014,
-    },
-    assets: {
-      index: "02",
-      label: "Assets listed",
-      value: 133,
-      breakdown: "62 stocks · 41 crypto · 30 memes",
-    },
+  token: { symbol: "$ASTRA" },
+  orbit: {
+    outer: [
+      { symbol: "NVDAx", logo: "nvidia" },
+      { symbol: "wBTC", logo: "bitcoin" },
+      { symbol: "AAPLx", logo: "apple" },
+      { symbol: "SOL", logo: "solana" },
+      { symbol: "GOOGLx", logo: "google" },
+      { symbol: "TSLAx", logo: "tesla" },
+      { symbol: "ETH", logo: "ethereum" },
+      { symbol: "METAx", logo: "meta" },
+    ],
+    inner: [
+      { symbol: "ANTHx", logo: "anthropic" },
+      { symbol: "BONK" },
+      { symbol: "AMDx", logo: "amd" },
+      { symbol: "WIF" },
+      { symbol: "SPYx", mark: "S&P" },
+    ],
   },
   form,
 };
@@ -108,14 +94,14 @@ export const heroNav: HeroNavContent = {
 };
 
 export interface ServiceItem {
-  /** Bracketed mono index, e.g. "01". */
-  index: string;
   title: string;
   caption: string;
-  /** The count-up readout beside the index: value, suffix, unit. */
+  /** The count-up readout over the title: value, suffix, unit. */
   stat: { value: number; suffix: string; unit: string };
-  /** A mono line of what's actually inside. */
-  tickers: string;
+  /** What's actually inside, as logo coins — the first `show` on screen, the
+   *  rest cycling through those slots. */
+  logos: OrbitAsset[];
+  show: number;
 }
 
 export interface ServicesContent {
@@ -127,8 +113,6 @@ export interface ServicesContent {
   left: ServiceItem[];
   /** Right-hand feature column (right-aligned). */
   right: ServiceItem[];
-  /** Mono readout under the burst. */
-  center: string;
   footnote: string;
 }
 
@@ -142,48 +126,98 @@ export const services: ServicesContent = {
   titleBottom: "Held as one.",
   left: [
     {
-      index: "01",
       title: "Stocks",
       caption: "Built to hold",
       stat: { value: 62, suffix: "", unit: "listed" },
-      tickers: "NVDAx · AAPLx · SPYx · GOOGLx · TSLAx",
+      show: 5,
+      logos: [
+        { symbol: "NVDAx", logo: "nvidia" },
+        { symbol: "AAPLx", logo: "apple" },
+        { symbol: "GOOGLx", logo: "google" },
+        { symbol: "TSLAx", logo: "tesla" },
+        { symbol: "METAx", logo: "meta" },
+        { symbol: "NFLXx", logo: "netflix" },
+        { symbol: "PLTRx", logo: "palantir" },
+        { symbol: "HOODx", logo: "robinhood" },
+        { symbol: "SPOTx", logo: "spotify" },
+        { symbol: "AVGOx", logo: "broadcom" },
+        { symbol: "ABNBx", logo: "airbnb" },
+        { symbol: "PYPLx", logo: "paypal" },
+        { symbol: "SHOPx", logo: "shopify" },
+      ],
     },
     {
-      index: "03",
       title: "Memecoins",
       caption: "The whole meta",
       stat: { value: 30, suffix: "", unit: "listed" },
-      tickers: "BONK · WIF · POPCAT · MEW · FARTCOIN",
+      show: 4,
+      logos: [
+        { symbol: "BONK" },
+        { symbol: "WIF" },
+        { symbol: "POPCAT" },
+        { symbol: "FARTCOIN" },
+        { symbol: "PNUT" },
+        { symbol: "MEW" },
+        { symbol: "GIGA" },
+        { symbol: "MOODENG" },
+        { symbol: "PENGU" },
+        { symbol: "DOGE", logo: "dogecoin" },
+      ],
     },
   ],
   right: [
     {
-      index: "02",
       title: "Crypto",
       caption: "Always on",
       stat: { value: 41, suffix: "", unit: "listed" },
-      tickers: "wBTC · SOL · ETH · JUP · JTO",
+      show: 4,
+      logos: [
+        { symbol: "wBTC", logo: "bitcoin" },
+        { symbol: "SOL", logo: "solana" },
+        { symbol: "ETH", logo: "ethereum" },
+        { symbol: "COINx", logo: "coinbase" },
+        { symbol: "LINK", logo: "chainlink" },
+        { symbol: "XRP", logo: "xrp" },
+        { symbol: "SUI", logo: "sui" },
+        { symbol: "TON", logo: "ton" },
+        { symbol: "LTC", logo: "litecoin" },
+        { symbol: "ADA", logo: "cardano" },
+        { symbol: "BNB", logo: "binance" },
+      ],
     },
     {
-      index: "04",
       title: "Redeemable",
       caption: "Any time",
       stat: { value: 24, suffix: "/7", unit: "redemption" },
-      tickers: "burn 1 share → every token back",
+      show: 3,
+      logos: [
+        { symbol: "SPYx", mark: "S&P" },
+        { symbol: "ANTHx", logo: "anthropic" },
+        { symbol: "AMDx", logo: "amd" },
+        { symbol: "QQQx", mark: "QQQ" },
+        { symbol: "NVDAx", logo: "nvidia" },
+        { symbol: "wBTC", logo: "bitcoin" },
+        { symbol: "BONK" },
+        { symbol: "AAPLx", logo: "apple" },
+      ],
     },
   ],
-  center: "133 assets · 1 token · 0 lockups",
   footnote:
     "We pull stocks, crypto and memecoins into a single token you can hold, send and redeem — priced live, routed for the best fill, yours on-chain.",
 };
 
+/** One end of a step's little diagram: a stack of coins, or the $ASTRA planet. */
+export type FlowNode = { logos: OrbitAsset[]; more?: number } | "planet";
+
 export interface TimelineStep {
-  /** Two-digit index shown in the gradient numeral, e.g. "01". */
+  /** Two-digit index, e.g. "01". */
   index: string;
   title: string;
   body: string;
-  /** The hard fact under the step, in mono. */
+  /** The hard fact under the step. */
   meta: string;
+  /** What the step does, drawn as coins with arrows between: from → to. */
+  flow: FlowNode[];
 }
 
 export interface TimelineContent {
@@ -191,10 +225,6 @@ export interface TimelineContent {
   titleTop: string;
   /** Masthead bottom line — haze → white half. */
   titleBottom: string;
-  /** Label on the live step counter, e.g. "Step". */
-  counterLabel: string;
-  /** Right-hand readout opposite the counter. */
-  total: string;
   steps: TimelineStep[];
 }
 
@@ -207,38 +237,41 @@ export interface TimelineContent {
 export const timeline: TimelineContent = {
   titleTop: "From many",
   titleBottom: "to one.",
-  counterLabel: "Step",
-  total: "Two approvals · end to end",
   steps: [
     {
       index: "01",
       title: "Log in",
       body: "Email makes you a Solana wallet, keys yours to export. Phantom and Solflare work too.",
-      meta: "email → wallet · ~3s",
+      meta: "Email → wallet in ~3s",
+      flow: [{ logos: [{ symbol: "Email", logo: "gmail" }] }, { logos: [{ symbol: "SOL", logo: "solana" }] }],
     },
     {
       index: "02",
       title: "Pick",
       body: "Choose a ready basket or build your own from 133 stocks, cryptos and memecoins.",
-      meta: "up to 14 of 133 assets",
+      meta: "Up to 14 of 133 assets",
+      flow: [{ logos: [{ symbol: "NVDAx", logo: "nvidia" }, { symbol: "AAPLx", logo: "apple" }, { symbol: "wBTC", logo: "bitcoin" }, { symbol: "ETH", logo: "ethereum" }, { symbol: "BONK" }, { symbol: "TSLAx", logo: "tesla" }], more: 127 }],
     },
     {
       index: "03",
       title: "Pay",
       body: "USDC or SOL. Every swap is price-limited and routed for the best on-chain fill.",
-      meta: "usdc / sol · price-limited",
+      meta: "USDC or SOL · price-limited",
+      flow: [{ logos: [{ symbol: "USDC", logo: "usdc" }, { symbol: "SOL", logo: "solana" }] }, { logos: [{ symbol: "NVDAx", logo: "nvidia" }, { symbol: "wBTC", logo: "bitcoin" }, { symbol: "BONK" }, { symbol: "GOOGLx", logo: "google" }] }],
     },
     {
       index: "04",
       title: "Hold",
       body: "One token in your own wallet — send it or hold it like any other asset.",
-      meta: "1 token · your wallet",
+      meta: "One token · your wallet",
+      flow: [{ logos: [{ symbol: "NVDAx", logo: "nvidia" }, { symbol: "wBTC", logo: "bitcoin" }, { symbol: "ETH", logo: "ethereum" }, { symbol: "BONK" }, { symbol: "AAPLx", logo: "apple" }] }, "planet"],
     },
     {
       index: "05",
       title: "Redeem",
       body: "Burn the share, get the exact tokens back. Nobody can switch it off.",
-      meta: "burn → exact tokens",
+      meta: "Burn → exact tokens back",
+      flow: ["planet", { logos: [{ symbol: "NVDAx", logo: "nvidia" }, { symbol: "wBTC", logo: "bitcoin" }, { symbol: "WIF" }, { symbol: "AAPLx", logo: "apple" }] }],
     },
   ],
 };
@@ -386,6 +419,9 @@ export interface ProofStat {
   value: number;
   suffix: string;
   label: string;
+  /** The coins the proof is about, under its line. */
+  logos?: OrbitAsset[];
+  more?: number;
 }
 
 export interface LogoSceneContent {
@@ -394,11 +430,13 @@ export interface LogoSceneContent {
   /** Masthead bottom line — the haze → white half. */
   titleBottom: string;
   subtitle: string;
-  /** Two proofs left of the token, two right. */
+  /** The proofs, read as one line under the planet. */
   left: ProofStat[];
   right: ProofStat[];
-  /** The hero's contact form, carried onto the closing scene. */
-  form: HeroFormContent;
+  /** The word set huge behind the planet, in outline. */
+  word: string;
+  /** Everything a basket can hold, running past along the foot. */
+  ticker: OrbitAsset[];
 }
 
 export const logoScene: LogoSceneContent = {
@@ -407,14 +445,40 @@ export const logoScene: LogoSceneContent = {
   subtitle:
     "Every market pulled into a single token — held and redeemed in your own wallet.",
   left: [
-    { index: "01", prefix: "", value: 100, suffix: "%", label: "Redeemable — nobody can switch it off" },
+    { index: "01", prefix: "", value: 100, suffix: "%", label: "Redeemable — nobody can switch it off", logos: [{ symbol: "NVDAx", logo: "nvidia" }, { symbol: "wBTC", logo: "bitcoin" }, { symbol: "BONK" }, { symbol: "AAPLx", logo: "apple" }] },
     { index: "02", prefix: ">", value: 10, suffix: "%", label: "Of $ASTRA supply already burned" },
   ],
   right: [
-    { index: "03", prefix: "", value: 133, suffix: "", label: "Stocks, crypto and memecoins listed" },
+    { index: "03", prefix: "", value: 133, suffix: "", label: "Stocks, crypto and memecoins listed", logos: [{ symbol: "TSLAx", logo: "tesla" }, { symbol: "SOL", logo: "solana" }, { symbol: "GOOGLx", logo: "google" }, { symbol: "ETH", logo: "ethereum" }, { symbol: "WIF" }], more: 128 },
     { index: "04", prefix: "<", value: 2, suffix: " min", label: "Price freshness — or no trade" },
   ],
-  form,
+  word: "ONE TOKEN",
+  ticker: [
+    { symbol: "NVDAx", logo: "nvidia" },
+    { symbol: "wBTC", logo: "bitcoin" },
+    { symbol: "BONK" },
+    { symbol: "AAPLx", logo: "apple" },
+    { symbol: "SOL", logo: "solana" },
+    { symbol: "TSLAx", logo: "tesla" },
+    { symbol: "WIF" },
+    { symbol: "SPYx", mark: "S&P" },
+    { symbol: "ETH", logo: "ethereum" },
+    { symbol: "GOOGLx", logo: "google" },
+    { symbol: "POPCAT" },
+    { symbol: "METAx", logo: "meta" },
+    { symbol: "PENGU" },
+    { symbol: "AMDx", logo: "amd" },
+    { symbol: "JUP" },
+    { symbol: "NFLXx", logo: "netflix" },
+    { symbol: "FARTCOIN" },
+    { symbol: "PLTRx", logo: "palantir" },
+    { symbol: "TRUMP" },
+    { symbol: "COINx", logo: "coinbase" },
+    { symbol: "PYTH" },
+    { symbol: "HOODx", logo: "robinhood" },
+    { symbol: "MOODENG" },
+    { symbol: "QQQx", mark: "QQQ" },
+  ],
 };
 
 export interface NavItem {

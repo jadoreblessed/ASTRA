@@ -1,0 +1,58 @@
+# Production-shaped: Postgres + three processes from one image.
+# The signer is never published to the host — `expose`, no `ports`.
+services:
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: astra
+      POSTGRES_PASSWORD: astra
+      POSTGRES_DB: astra
+    volumes:
+      - pg:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U astra"]
+      interval: 5s
+      retries: 10
+
+  api:
+    build: .
+    env_file: .env
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgres://astra:astra@db:5432/astra
+      SIGNER_HOST: signer
+    ports:
+      - "8080:8080"
+    depends_on:
+      db:
+        condition: service_healthy
+    command: ["node", "dist/server.js"]
+
+  worker:
+    build: .
+    env_file: .env
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgres://astra:astra@db:5432/astra
+      SIGNER_HOST: signer
+    depends_on:
+      db:
+        condition: service_healthy
+    command: ["node", "dist/workers/index.js"]
+
+  signer:
+    build: .
+    env_file: .env
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgres://astra:astra@db:5432/astra
+      SIGNER_HOST: 0.0.0.0
+    expose:
+      - "8081"
+    depends_on:
+      db:
+        condition: service_healthy
+    command: ["node", "dist/signer/service.js"]
+
+volumes:
+  pg:
