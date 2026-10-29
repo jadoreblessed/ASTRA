@@ -54,7 +54,9 @@ export async function sendVersioned(payer: Keypair, base64: string): Promise<Sen
   const before = await c.getBalance(payer.publicKey, COMMITMENT);
   const tx = VersionedTransaction.deserialize(Buffer.from(base64, "base64"));
   tx.sign([payer]);
-  const { blockhash, lastValidBlockHeight } = await c.getLatestBlockhash(COMMITMENT);
+  // Confirm against the swap's own blockhash — Jupiter set it, not us.
+  const blockhash = tx.message.recentBlockhash;
+  const { lastValidBlockHeight } = await c.getLatestBlockhash(COMMITMENT);
   const sig = await c.sendRawTransaction(tx.serialize(), { maxRetries: 3 });
   const res = await c.confirmTransaction({ signature: sig, blockhash, lastValidBlockHeight }, COMMITMENT);
   if (res.value.err) throw new Error(`swap failed: ${JSON.stringify(res.value.err)}`);
@@ -90,7 +92,7 @@ const ata = (mint: PublicKey, owner: PublicKey, program = TOKEN_PROGRAM_ID) =>
 
 /** Classic SPL or Token-2022 (xStocks are Token-2022) — read off the mint account. */
 const programs = new Map<string, PublicKey>();
-async function programOf(mint: PublicKey): Promise<PublicKey> {
+export async function programOf(mint: PublicKey): Promise<PublicKey> {
   const key = mint.toBase58();
   const hit = programs.get(key);
   if (hit) return hit;

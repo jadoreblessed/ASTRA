@@ -4,7 +4,9 @@ import { config } from "../config.js";
 import { one, query } from "../db.js";
 import { SOL_MINT, USDC_MINT } from "../catalog.js";
 import { quote as jupQuote } from "../chain/jupiter.js";
-import { parsedTx, received, signedBy } from "../chain/rpc.js";
+import { PublicKey } from "@solana/web3.js";
+import { COMMITMENT, isAddress, parsedTx, received, rpc, signedBy } from "../chain/rpc.js";
+import { programOf } from "../chain/spl.js";
 import { vaultAddress } from "../chain/wallet.js";
 import { requireUser } from "../http/auth.js";
 import { checkBasketShape, checkFresh, checkOrderSize, checkTrading, splitByWeight } from "../policy/engine.js";
@@ -153,6 +155,7 @@ export async function tradeRoutes(app: FastifyInstance): Promise<void> {
     if (!b) return reply.code(404).send({ error: "No such basket." });
     const { side, amount, currency } = p.data;
     if (side !== "buy" && !b.shareMint) return reply.code(409).send({ error: "Nobody holds this basket yet." });
+    if ((await legsOf(b.id)).length === 0) return reply.code(409).send({ error: "This basket isn't priced yet — try again in a minute." });
     const solPrice = (await one<{ p: number }>(`SELECT usd_price::float8 AS p FROM assets WHERE mint = $1`, [SOL_MINT]))?.p ?? 0;
     const usdValue = side === "buy" ? amount * (currency === "USDC" ? 1 : solPrice) : amount * b.price;
     const size = checkOrderSize(limits(), usdValue);
@@ -196,7 +199,7 @@ export async function tradeRoutes(app: FastifyInstance): Promise<void> {
     const own = await one(`SELECT 1 AS x FROM orders WHERE id = $1 AND user_id = $2`, [req.params.id, u.id]);
     if (!own) return reply.code(404).send({ error: "No such order." });
     const r = await signer<string>("/pay", { orderId: req.params.id });
-    if (!r.ok) return reply.code(r.code === "trading_off" ? 403 : 502).send({ error: r.error, code: r.code });
+    if (!r.ok) return reply.code(r.code === "trading_off" ? 403 : r.code === "funds" ? 402 : 502).send({ error: r.error, code: r.code });
     return { signature: r.result, status: "paid" };
   });
 
@@ -205,7 +208,7 @@ export async function tradeRoutes(app: FastifyInstance): Promise<void> {
     const u = await requireUser(req, reply);
     if (!u) return;
     const sig = String(req.body?.signature ?? "");
-    if (sig.length < 60) return reply.code(400).send({ error: "Bad signature." });
+    if (!/^[1-9A-HJ-NP-Za-km-z]{64,90}$/.test(sig)) return reply.code(400).send({ error: "Bad signature." });
     const o = await one<{ id: string; side: string; currency: string; amount_raw: string; basket_id: string; status: string }>(
       `SELECT id, side, currency, amount_raw::text AS amount_raw, basket_id, status FROM orders WHERE id = $1 AND user_id = $2`,
       [req.params.id, u.id],
@@ -213,7 +216,7 @@ export async function tradeRoutes(app: FastifyInstance): Promise<void> {
     if (!o) return reply.code(404).send({ error: "No such order." });
     if (o.status !== "awaiting_deposit") return reply.code(409).send({ error: `Order is ${o.status}.` });
 
-    const tx = await parsedTx(sig);
+    const tx = await parsedTx(sig).catch(() => null);
     if (!tx) return reply.code(409).send({ error: "Transaction not found yet — try again in a few seconds." });
     if (!signedBy(tx, u.wallet)) return reply.code(400).send({ error: "That transaction wasn't sent from your wallet." });
     const vault = await vaultAddress();
@@ -229,6 +232,18 @@ export async function tradeRoutes(app: FastifyInstance): Promise<void> {
     ).catch(() => null);
     if (!ok) return reply.code(409).send({ error: "That transaction was already used." });
     return { status: "paid" };
+  });
+
+  /**
+   * What the browser needs to build a payment without talking to an RPC itself
+   * (public RPCs refuse browsers): a fresh blockhash and the mint's token program.
+   */
+  app.get<{ Querystring: { mint?: string } }>("/api/chain/prep", async (req, reply) => {
+    const mint = req.query.mint ?? "SOL";
+    if (mint !== "SOL" && !isAddress(mint)) return reply.code(400).send({ error: "Bad mint." });
+    const { blockhash, lastValidBlockHeight } = await rpc().getLatestBlockhash(COMMITMENT);
+    const program = mint === "SOL" ? null : (await programOf(new PublicKey(mint))).toBase58();
+    return { blockhash, lastValidBlockHeight, program };
   });
 
   /** Build your own basket: listed assets, weights to 100%, its own page and chart. */

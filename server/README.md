@@ -63,6 +63,10 @@ codes are printed to the log (and offered in the UI, dev only), and trading is
 
 ## The switches and caps
 
+`npm run live:setup` writes `.env.live` (fresh keys, its own database, trading
+on, the caps below) and `npm run dev:live` runs on it — see
+[TESTING.md](TESTING.md). Trading refuses to start without a real `MASTER_KEY`.
+
 ```
 TRADING_ENABLED=false            # anything that moves money
 MAX_TOTAL_SPEND_LAMPORTS=50000000   # 0.05 SOL — lifetime cap on platform fees + rent
@@ -93,6 +97,8 @@ the sealed vault key lives in `kv.vault` (or set `VAULT_SEALED`).
   service, not by a program. "Nobody can switch it off" needs an on-chain
   program — the upgrade path, once there is volume to justify its deploy cost.
 - Rebalancing is described per basket but not executed yet.
+- Failed legs are refunded automatically; an order a crash stopped
+  mid-execution is parked for a manual look, not retried.
 - Not audited. Keep `MAX_ORDER_USD` tiny until it is.
 
 ## Layout

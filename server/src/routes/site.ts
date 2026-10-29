@@ -1,11 +1,26 @@
 import type { FastifyInstance } from "fastify";
 import { config } from "../config.js";
 import { one } from "../db.js";
+import { PublicKey } from "@solana/web3.js";
 import { vaultAddress } from "../chain/wallet.js";
+import { COMMITMENT, rpc } from "../chain/rpc.js";
 import { signerUp } from "../signer/client.js";
 import { spentLamports } from "../policy/limits.js";
 import { assetViews, basketView, basketViews, usd } from "../services/views.js";
 import { navHistory } from "../services/nav.js";
+
+/** The vault's own SOL (what pays fees and rent), cached briefly. */
+let vaultSol: { at: number; sol: number | null } = { at: 0, sol: null };
+async function vaultBalance(): Promise<number | null> {
+  if (Date.now() - vaultSol.at < 20_000) return vaultSol.sol;
+  try {
+    const lamports = await rpc().getBalance(new PublicKey(await vaultAddress()), COMMITMENT);
+    vaultSol = { at: Date.now(), sol: lamports / 1e9 };
+  } catch {
+    vaultSol = { at: Date.now(), sol: null };
+  }
+  return vaultSol.sol;
+}
 
 /** Read-only market data — everything the Explore / Assets / basket screens show. */
 export async function siteRoutes(app: FastifyInstance): Promise<void> {
@@ -20,6 +35,7 @@ export async function siteRoutes(app: FastifyInstance): Promise<void> {
     cluster: config.SOLANA_CLUSTER,
     trading: config.TRADING_ENABLED,
     vault: await vaultAddress(),
+    vaultSol: await vaultBalance(),
     maxOrderUsd: config.MAX_ORDER_USD,
     maxSlippageBps: config.MAX_SLIPPAGE_BPS,
     maxBasketAssets: config.MAX_BASKET_ASSETS,

@@ -6,9 +6,9 @@ import { one, query } from "../db.js";
 import { log } from "../logger.js";
 import { safeEqual } from "../util/crypto.js";
 import { exportSecret, openCustodial, openVault, type SealedRow } from "../chain/wallet.js";
-import { parsedTx, received } from "../chain/rpc.js";
+import { COMMITMENT, parsedTx, received, rpc } from "../chain/rpc.js";
 import { quote, swapTransaction } from "../chain/jupiter.js";
-import { ATA_RENT, FEE_ESTIMATE, burnShares, createShareMint, mintRent, mintShares, sendVersioned, transfer, type Sent } from "../chain/spl.js";
+import { ATA_RENT, FEE_ESTIMATE, burnShares, createShareMint, mintRent, mintShares, sendVersioned, tokenBalance, transfer, type Sent } from "../chain/spl.js";
 import { SOL_MINT, USDC_MINT } from "../catalog.js";
 import { checkBudget, checkFresh, checkOrderSize, checkTrading, splitByWeight, type Verdict } from "../policy/engine.js";
 import { limits, spentLamports } from "../policy/limits.js";
@@ -24,6 +24,9 @@ import { limits, spentLamports } from "../policy/limits.js";
  *  - execute an order: swap the payment into the basket (price-limited legs),
  *    mint shares; or burn shares and pay out the exact underlying (redeem) or
  *    its value in USDC/SOL (sell),
+ *  - never keep a user's money on a failure: a buy leg that can't fill is sent
+ *    back, a buy that fills nothing is refunded whole, shares are returned if
+ *    the burn fails, and a sell leg that can't swap pays out the token itself,
  *  - export a custodial user's key to its owner.
  *
  * Every SOL the vault pays (fees, rent) is written to `spend_ledger` and the
@@ -127,6 +130,20 @@ async function payCustodial(orderId: string): Promise<string> {
   const mint = o.side === "buy" ? (o.currency === "SOL" ? "SOL" : USDC_MINT) : b?.share_mint;
   if (!mint) throw new Error("basket not deployed");
   const decimals = o.side === "buy" ? currencyDecimals(o.currency) : 6;
+
+  // Say what's missing in plain words before the chain does it in a stack trace.
+  const need = BigInt(o.amount_raw);
+  const lamports = BigInt(await rpc().getBalance(user.publicKey, COMMITMENT));
+  const feeRoom = BigInt(FEE_ESTIMATE + ATA_RENT);
+  const where = `Top up your ASTRA wallet ${user.publicKey.toBase58()}`;
+  if (mint === "SOL") {
+    if (lamports < need + feeRoom) throw new Refused({ ok: false, code: "funds", reason: `Not enough SOL for this order and its fee. ${where}.` });
+  } else {
+    if (lamports < feeRoom) throw new Refused({ ok: false, code: "funds", reason: `Your wallet needs ~0.003 SOL for network fees. ${where}.` });
+    const have = await tokenBalance(user.publicKey.toBase58(), mint);
+    const label = o.side === "buy" ? o.currency : "shares";
+    if (have < need) throw new Refused({ ok: false, code: "funds", reason: `Not enough ${label} in your wallet for this order. ${where}.` });
+  }
   // The user's wallet pays its own fee — this never touches the vault budget.
   const sent = await transfer(user, user, mint, vault, BigInt(o.amount_raw), decimals);
   await query(`UPDATE orders SET deposit_sig = $2, status = 'paid', updated_at = now() WHERE id = $1`, [o.id, sent.sig]);
@@ -147,6 +164,7 @@ async function executeBuy(o: OrderRow): Promise<Record<string, unknown>> {
 
   const legs = splitByWeight(BigInt(o.amount_raw), holdings.map((h) => h.weight_bps));
   const fills: { symbol: string; inRaw: string; outRaw: string; sig: string | null }[] = [];
+  const missed: { symbol: string; inRaw: string; error: string }[] = [];
   for (let i = 0; i < holdings.length; i++) {
     const h = holdings[i];
     const inRaw = legs[i];
@@ -155,13 +173,32 @@ async function executeBuy(o: OrderRow): Promise<Record<string, unknown>> {
       fills.push({ symbol: h.symbol, inRaw: String(inRaw), outRaw: String(inRaw), sig: null });
       continue;
     }
-    const q = await quote(inMint, h.mint, inRaw, config.MAX_SLIPPAGE_BPS);
-    const swap = await swapTransaction(q, vaultAddr);
-    const sent = await spend(ATA_RENT + FEE_ESTIMATE * 4, `buy ${o.id} ${h.symbol}`, () => sendVersioned(vault, swap));
-    const tx = await parsedTx(sent.sig);
-    const got = tx ? received(tx, vaultAddr, h.mint === SOL_MINT ? "SOL" : h.mint) : 0n;
-    const outRaw = got > 0n ? got : BigInt(q.otherAmountThreshold);
-    fills.push({ symbol: h.symbol, inRaw: String(inRaw), outRaw: String(outRaw), sig: sent.sig });
+    try {
+      const q = await quote(inMint, h.mint, inRaw, config.MAX_SLIPPAGE_BPS);
+      const swap = await swapTransaction(q, vaultAddr);
+      const sent = await spend(ATA_RENT + FEE_ESTIMATE * 4, `buy ${o.id} ${h.symbol}`, () => sendVersioned(vault, swap));
+      const tx = await parsedTx(sent.sig);
+      const got = tx ? received(tx, vaultAddr, h.mint === SOL_MINT ? "SOL" : h.mint) : 0n;
+      const outRaw = got > 0n ? got : BigInt(q.otherAmountThreshold);
+      fills.push({ symbol: h.symbol, inRaw: String(inRaw), outRaw: String(outRaw), sig: sent.sig });
+    } catch (err) {
+      // A leg that can't fill (no route, slippage, the network) is sent back, not kept.
+      log.warn({ order: o.id, symbol: h.symbol, err: (err as Error).message }, "buy leg missed");
+      missed.push({ symbol: h.symbol, inRaw: String(inRaw), error: (err as Error).message });
+    }
+  }
+
+  const unspent = missed.reduce((s, m) => s + BigInt(m.inRaw), 0n);
+  const payBack = async (raw: bigint) =>
+    (
+      await spend(ATA_RENT + FEE_ESTIMATE, `refund ${o.id}`, () =>
+        transfer(vault, vault, o.currency === "SOL" ? "SOL" : inMint, o.wallet, raw, currencyDecimals(o.currency)),
+      )
+    ).sig;
+
+  if (fills.length === 0) {
+    const refundSig = await payBack(BigInt(o.amount_raw));
+    return { refunded: true, refundSig, missed };
   }
 
   // Shares for what was actually bought, at the basket's live share price.
@@ -171,18 +208,25 @@ async function executeBuy(o: OrderRow): Promise<Record<string, unknown>> {
   }, 0);
   const nav = holdings.reduce((s, h) => s + h.units * h.usd_price, 0);
   const sharesRaw = BigInt(Math.floor((acquiredUsd / nav) * 1e6));
-  const mintSent = await spend(ATA_RENT + FEE_ESTIMATE, `mint ${o.id}`, () => mintShares(vault, shareMint, o.wallet, sharesRaw));
-
+  // What was bought is in the vault either way — book it before minting, so a
+  // failed mint can be retried without losing track of the tokens.
   for (const f of fills) {
     await query(`UPDATE basket_holdings SET vault_raw = vault_raw + $3::bigint WHERE basket_id = $1 AND symbol = $2`, [o.basket_id, f.symbol, f.outRaw]);
   }
+  const mintOnce = () => spend(ATA_RENT + FEE_ESTIMATE, `mint ${o.id}`, () => mintShares(vault, shareMint, o.wallet, sharesRaw));
+  const mintSent = await mintOnce().catch((err) => {
+    if (err instanceof Refused) throw err;
+    log.warn({ order: o.id, err: (err as Error).message }, "share mint failed — retrying once");
+    return mintOnce();
+  });
   await query(`UPDATE baskets SET shares_raw = shares_raw + $2::bigint WHERE id = $1`, [o.basket_id, String(sharesRaw)]);
   await query(
     `INSERT INTO holdings_by_user (user_id, basket_id, shares_raw) VALUES ($1, $2, $3::bigint)
      ON CONFLICT (user_id, basket_id) DO UPDATE SET shares_raw = holdings_by_user.shares_raw + EXCLUDED.shares_raw`,
     [o.user_id, o.basket_id, String(sharesRaw)],
   );
-  return { fills, shares: Number(sharesRaw) / 1e6, acquiredUsd, nav, mintSig: mintSent.sig };
+  const refundSig = unspent > 0n ? await payBack(unspent) : null;
+  return { fills, missed, refundSig, shares: Number(sharesRaw) / 1e6, acquiredUsd, nav, mintSig: mintSent.sig };
 }
 
 /** Redeem pays out the exact underlying; sell swaps it to the order currency first. */
@@ -196,9 +240,15 @@ async function executeExit(o: OrderRow): Promise<Record<string, unknown>> {
   if (sharesRaw <= 0n || sharesRaw > supply) throw new Error("share amount out of range");
 
   const holdings = await holdingsForExec(o.basket_id);
-  await spend(FEE_ESTIMATE, `burn ${o.id}`, () => burnShares(vault, b.share_mint, sharesRaw));
+  try {
+    await spend(FEE_ESTIMATE, `burn ${o.id}`, () => burnShares(vault, b.share_mint, sharesRaw));
+  } catch (err) {
+    // Nothing has moved yet — hand the shares straight back.
+    const back = await spend(FEE_ESTIMATE, `return ${o.id}`, () => transfer(vault, vault, b.share_mint, o.wallet, sharesRaw, 6));
+    return { refunded: true, refundSig: back.sig, error: (err as Error).message };
+  }
 
-  const outs: { symbol: string; outRaw: string; sig: string }[] = [];
+  const outs: { symbol: string; outRaw: string; sig: string; inKind?: boolean }[] = [];
   let proceeds = 0n;
   const outMint = currencyMint(o.currency);
   for (const h of holdings) {
@@ -213,14 +263,23 @@ async function executeExit(o: OrderRow): Promise<Record<string, unknown>> {
     } else if (h.mint === outMint) {
       proceeds += slice;
     } else {
-      must(checkFresh(limits(), h.price_at ? new Date(h.price_at) : null));
-      const q = await quote(h.mint, outMint, slice, config.MAX_SLIPPAGE_BPS);
-      const swap = await swapTransaction(q, vaultAddr);
-      const sent = await spend(ATA_RENT + FEE_ESTIMATE * 4, `sell ${o.id} ${h.symbol}`, () => sendVersioned(vault, swap));
-      const tx = await parsedTx(sent.sig);
-      const got = tx ? received(tx, vaultAddr, outMint === SOL_MINT ? "SOL" : outMint) : 0n;
-      proceeds += got > 0n ? got : BigInt(q.otherAmountThreshold);
-      outs.push({ symbol: h.symbol, outRaw: String(slice), sig: sent.sig });
+      try {
+        must(checkFresh(limits(), h.price_at ? new Date(h.price_at) : null));
+        const q = await quote(h.mint, outMint, slice, config.MAX_SLIPPAGE_BPS);
+        const swap = await swapTransaction(q, vaultAddr);
+        const sent = await spend(ATA_RENT + FEE_ESTIMATE * 4, `sell ${o.id} ${h.symbol}`, () => sendVersioned(vault, swap));
+        const tx = await parsedTx(sent.sig);
+        const got = tx ? received(tx, vaultAddr, outMint === SOL_MINT ? "SOL" : outMint) : 0n;
+        proceeds += got > 0n ? got : BigInt(q.otherAmountThreshold);
+        outs.push({ symbol: h.symbol, outRaw: String(slice), sig: sent.sig });
+      } catch (err) {
+        // Can't swap it right now — pay the token itself out, as a redeem would.
+        log.warn({ order: o.id, symbol: h.symbol, err: (err as Error).message }, "sell leg paid in kind");
+        const sent = await spend(ATA_RENT + FEE_ESTIMATE, `redeem ${o.id} ${h.symbol}`, () =>
+          transfer(vault, vault, h.mint === SOL_MINT ? "SOL" : h.mint, o.wallet, slice, h.decimals),
+        );
+        outs.push({ symbol: h.symbol, outRaw: String(slice), sig: sent.sig, inKind: true });
+      }
     }
   }
   let payout: string | null = null;
@@ -249,7 +308,8 @@ async function execute(orderId: string): Promise<Record<string, unknown>> {
   const o = (await loadOrder(orderId))!;
   try {
     const result = o.side === "buy" ? await executeBuy(o) : await executeExit(o);
-    await query(`UPDATE orders SET status = 'filled', result = $2, updated_at = now() WHERE id = $1`, [o.id, JSON.stringify(result)]);
+    const status = result.refunded ? "refunded" : "filled";
+    await query(`UPDATE orders SET status = $3, result = $2, updated_at = now() WHERE id = $1`, [o.id, JSON.stringify(result), status]);
     return result;
   } catch (err) {
     const refused = err instanceof Refused;

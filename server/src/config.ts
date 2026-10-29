@@ -88,6 +88,10 @@ if (!parsed.success) {
 export const config: Config = parsed.data;
 export const isProd = config.NODE_ENV === "production";
 
+if (config.TRADING_ENABLED && !config.MASTER_KEY) {
+  console.error("TRADING_ENABLED needs a real MASTER_KEY — the dev key is public. Run `npm run live:setup`.");
+  process.exit(1);
+}
 if (isProd && !config.MASTER_KEY) {
   console.error("MASTER_KEY is required in production. Generate one with `npm run keys`.");
   process.exit(1);

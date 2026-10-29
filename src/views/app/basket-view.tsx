@@ -6,7 +6,7 @@ import { AssetLogo, LogoStack } from "@/components/common/asset-logo";
 import { Spring } from "@/components/common/robot-spring";
 import { Hover } from "@/components/common/touch-hover";
 import { formatPrice, type Basket } from "@/data/mocks/app";
-import { api, ApiError, type ApiDeposit, type ApiQuote } from "@/lib/astra-api";
+import { api, ApiError, confirmDeposit, pendingDeposits, type ApiDeposit, type ApiQuote } from "@/lib/astra-api";
 import { payDeposit, provider } from "@/lib/wallet";
 import { Press } from "@/components/ui/press";
 
@@ -69,13 +69,16 @@ async function placeOrder(
     const name = provider("Phantom") ? "Phantom" : "Solflare";
     note(`Approve the transfer in ${name}…`);
     const signature = await payDeposit(name, deposit);
-    await api(`/api/orders/${order.id}/deposit`, { body: { signature } });
+    pendingDeposits.add(order.id, signature);
+    note("Sent — waiting for the network…");
+    await confirmDeposit(order.id, signature);
   }
   note("Paid — filling your order…");
   for (let i = 0; i < 40; i++) {
     await new Promise((r) => setTimeout(r, 3_000));
     const { order: o } = await api<{ order: { status: string; error?: string } }>(`/api/orders/${order.id}`);
     if (o.status === "filled") return note("Filled. It's in your wallet.");
+    if (o.status === "refunded") return note("Couldn't fill it right now — your payment was sent back.");
     if (o.status === "failed" || o.status === "refused") return note(o.error ?? "The order didn't go through.");
   }
   note("Still filling — check Wallet in a minute.");
@@ -85,12 +88,19 @@ export const BasketView = ({ basket, onBack, onLogin }: BasketViewProps) => {
   const { asset, live, user, config, refresh } = useAppData();
   const [range, setRange] = useState<Range>("30");
   const [side, setSide] = useState<Side>("buy");
-  const [amount, setAmount] = useState(live ? "5" : "100");
+  const [amount, setAmount] = useState(live ? "1" : "100");
   const [currency, setCurrency] = useState<"USDC" | "SOL">("USDC");
   const [hovered, setHovered] = useState<string | null>(null);
   const [quote, setQuote] = useState<ApiQuote | null>(null);
   const [quoteError, setQuoteError] = useState<string | null>(null);
   const [tradeNote, setTradeNote] = useState("Trading opens at the $ASTRA launch");
+  // The slider only shows a note for a beat; an order's progress and outcome
+  // stay readable under it until the next one.
+  const [orderNote, setOrderNote] = useState<string | null>(null);
+  const note = (s: string) => {
+    setTradeNote(s);
+    setOrderNote(s);
+  };
   const ticking = useLive(basket.price);
   // Live data is the real price; the gentle tick is only for the offline demo.
   const price = live ? basket.price : ticking;
@@ -148,11 +158,11 @@ export const BasketView = ({ basket, onBack, onLogin }: BasketViewProps) => {
       return;
     }
     try {
-      setTradeNote("Placing your order…");
-      await placeOrder({ basket: basket.id, side, amount: value, currency }, user.custodial, setTradeNote);
+      note("Placing your order…");
+      await placeOrder({ basket: basket.id, side, amount: value, currency }, user.custodial, note);
       await refresh();
     } catch (err) {
-      setTradeNote(err instanceof ApiError || err instanceof Error ? err.message : "The order didn't go through.");
+      note(err instanceof ApiError || err instanceof Error ? err.message : "The order didn't go through.");
     }
   };
 
@@ -409,6 +419,11 @@ export const BasketView = ({ basket, onBack, onLogin }: BasketViewProps) => {
             doneLabel={tradeNote}
             onConfirm={() => void confirm()}
           />
+          {orderNote && (
+            <p role="status" className="m-0 text-center font-mulish text-[14px] leading-[1.45] break-words text-white/80">
+              {orderNote}
+            </p>
+          )}
           {live && config && !config.trading && (
             <p className="m-0 text-center font-mulish text-[13px] leading-[1.4] text-white/45">
               Quotes are live from Jupiter. Orders open at the $ASTRA launch.

@@ -48,9 +48,12 @@ export async function signIn(name: WalletName): Promise<string> {
   return token;
 }
 
-const RPC = process.env.NEXT_PUBLIC_SOLANA_RPC ?? "https://api.mainnet-beta.solana.com";
-
-/** Pays an order's deposit from the connected wallet; returns the signature. */
+/**
+ * Pays an order's deposit from the connected wallet and returns the signature
+ * as soon as the wallet has sent it. The browser never talks to an RPC: the
+ * blockhash and the mint's token program come from our API, and the API also
+ * confirms the payment on chain (`confirmDeposit`).
+ */
 export async function payDeposit(name: WalletName, d: ApiDeposit): Promise<string> {
   const p = provider(name);
   if (!p) throw new Error(`${name} isn't installed in this browser.`);
@@ -60,7 +63,7 @@ export async function payDeposit(name: WalletName, d: ApiDeposit): Promise<strin
 
   const web3 = await import("@solana/web3.js");
   const spl = await import("@solana/spl-token");
-  const conn = new web3.Connection(RPC, "confirmed");
+  const prep = await api<{ blockhash: string; program: string | null }>(`/api/chain/prep?mint=${encodeURIComponent(d.mint)}`);
   const owner = new web3.PublicKey(from);
   const vault = new web3.PublicKey(d.to);
   const tx = new web3.Transaction();
@@ -69,8 +72,7 @@ export async function payDeposit(name: WalletName, d: ApiDeposit): Promise<strin
     tx.add(web3.SystemProgram.transfer({ fromPubkey: owner, toPubkey: vault, lamports: BigInt(d.amountRaw) }));
   } else {
     const mint = new web3.PublicKey(d.mint);
-    const info = await conn.getAccountInfo(mint);
-    const program = info?.owner.equals(spl.TOKEN_2022_PROGRAM_ID) ? spl.TOKEN_2022_PROGRAM_ID : spl.TOKEN_PROGRAM_ID;
+    const program = prep.program === spl.TOKEN_2022_PROGRAM_ID.toBase58() ? spl.TOKEN_2022_PROGRAM_ID : spl.TOKEN_PROGRAM_ID;
     const src = spl.getAssociatedTokenAddressSync(mint, owner, false, program);
     const dst = spl.getAssociatedTokenAddressSync(mint, vault, true, program);
     tx.add(
@@ -79,8 +81,7 @@ export async function payDeposit(name: WalletName, d: ApiDeposit): Promise<strin
     );
   }
   tx.feePayer = owner;
-  tx.recentBlockhash = (await conn.getLatestBlockhash("confirmed")).blockhash;
+  tx.recentBlockhash = prep.blockhash;
   const { signature } = await p.signAndSendTransaction(tx);
-  await conn.confirmTransaction(signature, "confirmed");
   return signature;
 }

@@ -33,6 +33,12 @@ const every = (ms: number, name: string, fn: () => Promise<unknown>) => {
 
 async function processOrders(): Promise<void> {
   if (!config.TRADING_ENABLED) return;
+  // An order caught mid-execution by a crash is never retried blind — it is
+  // parked for a look at the vault and the log.
+  await query(
+    `UPDATE orders SET status = 'failed', error = 'Stopped while executing — check the vault and the log before retrying.', updated_at = now()
+      WHERE status = 'executing' AND updated_at < now() - interval '20 minutes'`,
+  );
   const { rows } = await query<{ id: string }>(`SELECT id FROM orders WHERE status = 'paid' ORDER BY created_at LIMIT 5`);
   for (const o of rows) {
     const r = await signer("/execute", { orderId: o.id });

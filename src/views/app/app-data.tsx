@@ -3,7 +3,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 
 import { registerIcons } from "@/components/common/asset-logo";
-import { api, session, type ApiConfig, type ApiPosition, type ApiStats, type ApiUser } from "@/lib/astra-api";
+import { api, resumeDeposits, session, type ApiConfig, type ApiPosition, type ApiStats, type ApiUser } from "@/lib/astra-api";
 import type { AppContent, AppStat, Asset, Basket } from "@/data/mocks/app";
 
 /**
@@ -93,6 +93,8 @@ export const AppDataProvider = ({ initial, children }: { initial: AppContent; ch
       const me = await api<{ user: ApiUser; positions: ApiPosition[] }>("/api/me");
       setUser(me.user);
       setPositions(me.positions);
+      // A payment a previous visit signed but never saw confirmed.
+      void resumeDeposits();
     } catch {
       session.set(null);
       setUser(null);

@@ -15,8 +15,10 @@
     "dev:worker": "tsx watch --env-file-if-exists=.env src/workers/index.ts",
     "dev:signer": "tsx watch --env-file-if-exists=.env src/signer/service.ts",
     "dev:all": "tsx --env-file-if-exists=.env src/dev-all.ts",
+    "dev:live": "tsx --env-file=.env.live src/dev-all.ts",
     "migrate": "tsx --env-file-if-exists=.env src/util/migrate.ts",
     "keys": "tsx src/util/keys.ts",
+    "live:setup": "tsx src/util/live-setup.ts",
     "test": "node --experimental-strip-types --test tests/*.test.ts",
     "typecheck": "tsc --noEmit"
   },

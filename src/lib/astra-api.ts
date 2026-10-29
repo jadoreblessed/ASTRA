@@ -69,6 +69,7 @@ export interface ApiConfig {
   maxBasketAssets: number;
   spendCapSol: number;
   spentSol: number;
+  vaultSol?: number | null;
 }
 
 export interface ApiStats {
@@ -128,6 +129,65 @@ export interface ApiDeposit {
   amount: number;
   amountRaw: string;
   decimals: number;
+}
+
+/* ------------------------------------------------------------ deposits */
+
+/**
+ * A wallet payment, from the moment it's signed until the API has seen it on
+ * chain. Kept in localStorage so a closed tab or a dropped connection never
+ * strands a paid order: the next visit hands the signature in again.
+ */
+const PENDING_KEY = "astra.pending-deposits";
+type Pending = Record<string, string>;
+
+const readPending = (): Pending => {
+  try {
+    return JSON.parse(window.localStorage.getItem(PENDING_KEY) ?? "{}") as Pending;
+  } catch {
+    return {};
+  }
+};
+const writePending = (p: Pending) => {
+  try {
+    window.localStorage.setItem(PENDING_KEY, JSON.stringify(p));
+  } catch {
+    /* private mode: this tab's own retries still run */
+  }
+};
+
+export const pendingDeposits = {
+  add: (orderId: string, signature: string) => writePending({ ...readPending(), [orderId]: signature }),
+  remove: (orderId: string) => {
+    const p = readPending();
+    delete p[orderId];
+    writePending(p);
+  },
+};
+
+/** Hands a payment's signature to the API, waiting for the chain to show it (~1 min at most). */
+export async function confirmDeposit(orderId: string, signature: string, tries = 20): Promise<void> {
+  for (let i = 0; ; i++) {
+    try {
+      await api(`/api/orders/${orderId}/deposit`, { body: { signature } });
+      pendingDeposits.remove(orderId);
+      return;
+    } catch (err) {
+      const notYet = err instanceof ApiError && (err.status === 409 || err.status === 0) && /not found yet|reach/i.test(err.message);
+      if (!notYet || i >= tries - 1) {
+        if (!notYet) pendingDeposits.remove(orderId);
+        throw err;
+      }
+      await new Promise((r) => setTimeout(r, 3_000));
+    }
+  }
+}
+
+/** Retries every payment a previous visit signed but never got confirmed. */
+export async function resumeDeposits(): Promise<void> {
+  for (const [orderId, signature] of Object.entries(readPending())) {
+    await confirmDeposit(orderId, signature, 3).catch(() => undefined);
+  }
 }
 
 /* ------------------------------------------------------------ base58 (signatures) */
