@@ -4,6 +4,8 @@ import { useEffect, useRef } from "react";
 import { useReducedMotion } from "@react-spring/web";
 
 import { AssetLogo } from "@/components/common/asset-logo";
+import { preloadIcons } from "@/components/common/coin-image";
+import { TOKEN_ICONS } from "@/data/token-icons";
 import { useRobot } from "@/components/common/robot-view";
 import { subscribeToTicker } from "@/lib/animation/ticker";
 import { screens } from "@/lib/scene/screens";
@@ -46,17 +48,32 @@ export const CoinFlight = ({ coins }: CoinFlightProps) => {
   const layerRef = useRef<HTMLDivElement>(null);
   const itemRefs = useRef<(HTMLDivElement | null)[]>([]);
 
+  // Every logo the page can show is fetched up front, so swaps and flights never flash a letter.
+  useEffect(() => {
+    preloadIcons(Object.values(TOKEN_ICONS));
+  }, []);
+
   useEffect(() => {
     if (reduced || robot || !isLoaded) return;
     const layer = layerRef.current;
     if (!layer) return;
 
     let flying = false;
-    let hidden: HTMLElement[] = [];
+    let hidden = new Set<HTMLElement>();
 
     const restore = () => {
       hidden.forEach((el) => (el.style.visibility = ""));
-      hidden = [];
+      hidden = new Set();
+    };
+    /** Hide exactly `next`, unhiding whatever dropped out — no per-frame churn. */
+    const hideOnly = (next: Set<HTMLElement>) => {
+      hidden.forEach((el) => {
+        if (!next.has(el)) el.style.visibility = "";
+      });
+      next.forEach((el) => {
+        if (!hidden.has(el)) el.style.visibility = "hidden";
+      });
+      hidden = next;
     };
 
     const land = () => {
@@ -81,29 +98,35 @@ export const CoinFlight = ({ coins }: CoinFlightProps) => {
         flying = true;
         layer.style.display = "block";
       }
-      restore();
 
+      // Read phase — every rect at once, so the browser lays out once per frame.
       const vw = window.innerWidth;
-      coins.forEach((coin, i) => {
+      const reads = coins.map((coin) => {
+        const src = document.querySelector<HTMLElement>(`[data-fly-src="${coin.symbol}"]`);
+        const dst = document.querySelector<HTMLElement>(`[data-fly-dst="${coin.symbol}"]`);
+        return {
+          src,
+          dst,
+          a: src?.getBoundingClientRect() ?? null,
+          b: dst?.getBoundingClientRect() ?? null,
+          aOpacity: src ? Number(src.style.opacity || 1) : 0,
+        };
+      });
+
+      // Write phase.
+      const next = new Set<HTMLElement>();
+      reads.forEach((r, i) => {
         const node = itemRefs.current[i];
         if (!node) return;
-        const src = document.querySelector<HTMLElement>(`[data-fly-src="${coin.symbol}"]`);
-        if (!src) {
+        if (!r.src || !r.a) {
           node.style.opacity = "0";
           return;
         }
-        const dst = document.querySelector<HTMLElement>(`[data-fly-dst="${coin.symbol}"]`);
-        src.style.visibility = "hidden";
-        hidden.push(src);
-        if (dst) {
-          dst.style.visibility = "hidden";
-          hidden.push(dst);
-        }
-
-        const a = src.getBoundingClientRect();
+        next.add(r.src);
+        if (r.dst) next.add(r.dst);
+        const { a, aOpacity } = r;
         const ax = a.left + a.width / 2;
         const ay = a.top + a.height / 2;
-        const aOpacity = Number(src.style.opacity || 1);
 
         const local = clamp01((u - i * STAGGER) / (1 - STAGGER * (coins.length - 1)));
         const e = easeInOut(local);
@@ -112,8 +135,8 @@ export const CoinFlight = ({ coins }: CoinFlightProps) => {
         let y: number;
         let w: number;
         let opacity: number;
-        if (dst) {
-          const b = dst.getBoundingClientRect();
+        if (r.b) {
+          const b = r.b;
           const bx = b.left + b.width / 2;
           const by = b.top + b.height / 2;
           const bend = Math.sin(e * Math.PI);
@@ -132,6 +155,7 @@ export const CoinFlight = ({ coins }: CoinFlightProps) => {
         node.style.opacity = opacity.toFixed(3);
         node.style.transform = `translate(${(x - 24).toFixed(1)}px, ${(y - 24).toFixed(1)}px) scale(${(w / 48).toFixed(4)}) rotateY(${flip.toFixed(1)}deg)`;
       });
+      hideOnly(next);
     }, () => 0);
 
     return () => {

@@ -94,7 +94,9 @@ interface OrbitProps {
 const seen = (p: ReturnType<typeof place>, shadow: number) => {
   const base = 0.32 + 0.68 * p.depth;
   const d = Math.hypot(p.x, p.y);
-  const v = p.depth > 0.5 ? base : base * Math.min(1, Math.max(0, (d - shadow * 0.85) / (shadow * 0.35)));
+  // Behind the globe a coin dims to a third, never to nothing — the planet is
+  // particles, so a coin vanishing outright read as a bug.
+  const v = p.depth > 0.5 ? base : base * (0.35 + 0.65 * Math.min(1, Math.max(0, (d - shadow * 0.85) / (shadow * 0.35))));
   // Rounded so the server's and the client's first frames print the same value.
   return Math.round(v * 1000) / 1000;
 };
@@ -140,8 +142,10 @@ export const HeroIcon = ({ className, outer, inner, compact = false }: HeroIconP
   const running = isLoaded && active === screens.HERO;
   const geo = compact ? COMPACT : DESKTOP;
 
-  const outerLap = useSpring(lap(geo.outer.ms, still));
-  const innerLap = useSpring(lap(geo.inner.ms, still));
+  // The orbits only turn while the hero is on screen — off it they'd burn
+  // every frame for nothing (and the coin flight reads them frozen anyway).
+  const outerLap = useSpring({ ...lap(geo.outer.ms, still), pause: !running });
+  const innerLap = useSpring({ ...lap(geo.inner.ms, still), pause: !running });
 
   /* The planet breathes up and down. */
   const float = useSpring({

@@ -29,11 +29,11 @@ type Icon = "arrow" | "plus" | "x" | "none";
 
 /**
  * Two skins, both glass, both in the X button's language:
- *  - primary (and `light`, kept as an alias): dark violet glass with a thin
- *    lilac edge; floods lilac.
+ *  - primary (and `light`, kept as an alias): dark glass with a thin pink
+ *    edge; floods the brand pink — the one hue that means "act here".
  *  - ghost: dark glass with a white hairline; floods ice-white.
  */
-const PRIMARY = { bg: "rgba(26, 20, 58, 0.55)", fg: "#efeaff", flood: "#d2bdff", floodFg: "#1a1238", coin: "rgba(210,189,255,0.16)", coinFg: "#efeaff", border: "rgba(210,189,255,0.6)" };
+const PRIMARY = { bg: "rgba(42, 10, 28, 0.55)", fg: "#ffe9f3", flood: "#ff5fa8", floodFg: "#2a0718", coin: "rgba(255,95,168,0.16)", coinFg: "#ffe9f3", border: "rgba(255,95,168,0.6)" };
 const SKIN: Record<Variant, { bg: string; fg: string; flood: string; floodFg: string; coin: string; coinFg: string; border: string }> = {
   primary: PRIMARY,
   light: PRIMARY,

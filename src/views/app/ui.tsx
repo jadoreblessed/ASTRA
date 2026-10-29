@@ -274,7 +274,7 @@ export const SlideToConfirm = ({ label, doneLabel, onConfirm }: SlideToConfirmPr
         className="absolute top-[4px] bottom-[4px] left-[4px] rounded-full"
         style={{
           width: x.to((v) => v + KNOB),
-          backgroundImage: "var(--gradient-hero-cta)",
+          backgroundColor: "var(--signal-glow)",
           opacity: x.to((v) => 0.35 + Math.min(0.65, v / 220)),
         }}
       />
@@ -289,7 +289,7 @@ export const SlideToConfirm = ({ label, doneLabel, onConfirm }: SlideToConfirmPr
         onPointerUp={onUp}
         onPointerCancel={onUp}
         onKeyDown={onKey}
-        className="relative z-10 flex size-[52px] cursor-grab touch-none items-center justify-center rounded-full bg-white shadow-[0_8px_24px_-6px_rgb(109_139_255/0.8)] active:cursor-grabbing"
+        className="relative z-10 flex size-[52px] cursor-grab touch-none items-center justify-center rounded-full bg-white shadow-[0_8px_24px_-6px_rgb(255_95_168/0.8)] active:cursor-grabbing"
         style={{ transform: x.to((v) => `translateX(${v.toFixed(1)}px)`) }}
       >
         {done ? (

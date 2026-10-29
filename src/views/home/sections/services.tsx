@@ -14,6 +14,7 @@ import { useSceneFade } from "@/hooks/sections/use-scene-fade";
 import { useHeroLayout } from "@/hooks/use-hero-scale";
 import { useIsMobile } from "@/hooks/use-is-mobile";
 import { screens } from "@/lib/scene/screens";
+import { scrollState } from "@/lib/scene/scroll-state";
 import { easeReveal } from "@/utils/animation/easing";
 import type { OrbitAsset, ServiceItem, ServicesContent } from "@/data/mocks/home";
 
@@ -88,6 +89,9 @@ const useCycle = (logos: OrbitAsset[], show: number, enabled: boolean, phase: nu
     let id = 0;
     const lead = window.setTimeout(() => {
       id = window.setInterval(() => {
+        // Hold the row still while the slide is only partly on screen — the
+        // hero's coins may be flying into these very slots.
+        if ((scrollState.sceneProgress[screens.SITEMAP] ?? 0) < 0.97) return;
         setState((st) => {
           const slot = (st.turn * 7 + 3) % show;
           const [next, ...rest] = st.queue;

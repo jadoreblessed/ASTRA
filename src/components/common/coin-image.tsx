@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import { useCallback, useState, type ReactNode } from "react";
 
 /**
  * A token's own logo in a coin — with a lettered coin behind it as the
@@ -22,11 +22,34 @@ export function iconUrl(src: string, size: number): string {
   if (nft) u = `https://4everland.io/ipfs/${nft[1]}${nft[2] ? `/${nft[2]}` : ""}`;
   const ipfs = u.match(IPFS_PATH);
   if (ipfs) u = `https://4everland.io/ipfs/${ipfs[1]}`;
-  const px = Math.min(256, Math.max(64, Math.ceil(size * 2)));
+  // Two buckets only, so every coin of a symbol shares one cached file.
+  const px = size * 2 <= 64 ? 64 : 128;
   return `https://wsrv.nl/?url=${encodeURIComponent(u)}&w=${px}&h=${px}&fit=cover&output=webp`;
+}
+
+/** Warms the browser cache with every icon in both buckets — call once per page. */
+const warmed = new Set<string>();
+export function preloadIcons(srcs: string[]): void {
+  if (typeof window === "undefined") return;
+  for (const src of srcs) {
+    for (const size of [32, 64]) {
+      const url = iconUrl(src, size);
+      if (warmed.has(url)) continue;
+      warmed.add(url);
+      const img = new Image();
+      img.decoding = "async";
+      img.referrerPolicy = "no-referrer";
+      img.src = url;
+    }
+  }
 }
 export const CoinImage = ({ src, size, fallback }: { src: string; size: number; fallback: ReactNode }) => {
   const [state, setState] = useState<"loading" | "ok" | "failed">("loading");
+  // A cached icon can finish before hydration attaches onLoad — read its state on mount instead.
+  const settle = useCallback((img: HTMLImageElement | null) => {
+    if (!img || !img.complete) return;
+    setState(img.naturalWidth > 0 ? "ok" : "failed");
+  }, []);
   if (state === "failed") return <>{fallback}</>;
   return (
     <span
@@ -37,6 +60,7 @@ export const CoinImage = ({ src, size, fallback }: { src: string; size: number; 
       {state === "loading" && <span className="absolute inset-0">{fallback}</span>}
       {/* eslint-disable-next-line @next/next/no-img-element -- remote token icons, tiny, many hosts */}
       <img
+        ref={settle}
         src={iconUrl(src, size)}
         alt=""
         width={size}

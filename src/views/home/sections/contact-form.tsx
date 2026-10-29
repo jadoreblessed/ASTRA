@@ -74,7 +74,7 @@ const CaChip = ({ form, full }: { form: HeroFormContent; full: boolean }) => {
       aria-label={live ? `Copy contract address ${form.ca}` : `Contract address: ${form.ca}`}
       className={`flex h-[46px] items-center gap-[12px] rounded-full bg-white/[0.045] pr-[18px] pl-[6px] ${full ? "w-full justify-center" : "shrink-0"}`}
       style={{
-        boxShadow: edge.to((v) => `inset 0 0 0 1px rgb(210 189 255 / ${(0.1 + 0.45 * v).toFixed(3)})`),
+        boxShadow: edge.to((v) => `inset 0 0 0 1px rgb(255 95 168 / ${(0.1 + 0.5 * v).toFixed(3)})`),
         transform: shake.to((v) => `translateX(${(v * 5).toFixed(2)}px)`),
       }}
     >
@@ -82,7 +82,7 @@ const CaChip = ({ form, full }: { form: HeroFormContent; full: boolean }) => {
         <AstraMark size={26} live />
       </span>
       <span className="font-mulish text-[15px] leading-none text-white">$ASTRA</span>
-      <span className="rounded-full border border-accent-300/40 bg-accent-500/10 px-[8px] py-[4px] font-mono text-[13px] leading-none text-accent-200">
+      <span className="rounded-full border border-signal-glow/60 bg-signal-glow/12 px-[8px] py-[4px] font-mono text-[13px] leading-none text-signal-ring">
         {form.caLabel}
       </span>
       <span className={`font-mulish text-[15px] leading-none ${hover || note ? "text-white" : "text-white/80"}`}>
