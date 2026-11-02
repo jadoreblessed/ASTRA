@@ -37,7 +37,10 @@ export const session = {
   },
 };
 
-export async function api<T>(path: string, init: { method?: "GET" | "POST"; body?: unknown; timeoutMs?: number } = {}): Promise<T> {
+export async function api<T>(
+  path: string,
+  init: { method?: "GET" | "POST"; body?: unknown; timeoutMs?: number; headers?: Record<string, string> } = {},
+): Promise<T> {
   const token = session.get();
   let res: Response;
   try {
@@ -46,6 +49,7 @@ export async function api<T>(path: string, init: { method?: "GET" | "POST"; body
       headers: {
         ...(init.body === undefined ? {} : { "content-type": "application/json" }),
         ...(token ? { authorization: `Bearer ${token}` } : {}),
+        ...init.headers,
       },
       body: init.body === undefined ? undefined : JSON.stringify(init.body),
       signal: AbortSignal.timeout(init.timeoutMs ?? 15_000),

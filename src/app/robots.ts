@@ -13,7 +13,7 @@ export default function robots(): MetadataRoute.Robots {
       allow: "/",
       // The served forms (robot, phone) live under `/view/`; the proxy serves
       // them at the public URLs (D-016, `lib/page-forms`) — duplicates here.
-      disallow: "/view/",
+      disallow: ["/view/", "/admin"],
     },
     sitemap: `${siteConfig.url}/sitemap.xml`,
     host: siteConfig.url,

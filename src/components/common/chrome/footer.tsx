@@ -2,6 +2,8 @@
 
 import { useRef } from "react";
 
+import { useSiteLinks } from "@/lib/site-links";
+
 import { Hover } from "@/components/common/touch-hover";
 import { scrollToSection } from "@/utils/scroll-to-section";
 import { screens } from "@/lib/scene/screens";
@@ -84,6 +86,11 @@ export interface FooterProps {
 
 export const Footer = ({ content }: FooterProps) => {
   const ctaRef = useRef<HTMLAnchorElement>(null);
+  // X and Telegram come from /admin; a social with no link is left out.
+  const links = useSiteLinks();
+  const socials = content.social
+    .map((s) => ({ ...s, href: s.label === "X" ? links.x || s.href : s.label === "Telegram" ? links.telegram || s.href : s.href }))
+    .filter((s) => s.href);
   const topRef = useRef<HTMLButtonElement>(null);
 
   return (
@@ -154,7 +161,7 @@ export const Footer = ({ content }: FooterProps) => {
             ))}
           </ul>
           <ul className="flex flex-wrap items-center gap-7 max-hero-xs:gap-5">
-            {content.social.map((item) => (
+            {socials.map((item) => (
               <FooterSocialLink key={item.label} item={item} />
             ))}
           </ul>

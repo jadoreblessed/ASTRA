@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+
+import { useSiteLinks } from "@/lib/site-links";
 import Link from "next/link";
 
 import { AstraMark } from "@/components/ui/astra-mark";
@@ -36,6 +38,7 @@ const short = (w: string) => `${w.slice(0, 4)}…${w.slice(-4)}`;
 
 const Shell = () => {
   const { content, user } = useAppData();
+  const links = useSiteLinks();
   const [tab, setTab] = useState<Tab>("explore");
   const [basketId, setBasketId] = useState<string | null>(null);
   const [query, setQuery] = useState("");
@@ -151,11 +154,13 @@ const Shell = () => {
             <Press>
               <Link href="/" className="hover:text-white">Home</Link>
             </Press>
-            <Press>
-              <a href="https://x.com/astra" target="_blank" rel="noopener noreferrer" className="hover:text-white">
-                X
-              </a>
-            </Press>
+            {links.x && (
+              <Press>
+                <a href={links.x} target="_blank" rel="noopener noreferrer" className="hover:text-white">
+                  X
+                </a>
+              </Press>
+            )}
           </span>
         </div>
       </footer>

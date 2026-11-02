@@ -9,6 +9,7 @@ import { seed } from "./services/seed.js";
 import { siteRoutes } from "./routes/site.js";
 import { authRoutes } from "./routes/auth.js";
 import { tradeRoutes } from "./routes/trade.js";
+import { adminRoutes } from "./routes/admin.js";
 
 /** The public API — read-only market data, login, quotes, orders. Holds no keys. */
 export async function buildApi() {
@@ -25,6 +26,7 @@ export async function buildApi() {
   await app.register(siteRoutes);
   await app.register(authRoutes);
   await app.register(tradeRoutes);
+  await app.register(adminRoutes);
   return app;
 }
 

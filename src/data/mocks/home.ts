@@ -39,7 +39,8 @@ const form: HeroFormContent = {
   caLabel: "CA",
   ca: "Coming soon",
   xLabel: "ASTRA on X",
-  xHref: "https://x.com/astra",
+  /** Set in /admin; empty until then. */
+  xHref: "",
 };
 
 export const hero: HeroContent = {
@@ -513,8 +514,9 @@ export const footer: FooterContent = {
   ],
   social: [
     { label: "Email", href: "mailto:hello@astra.xyz" },
-    { label: "Twitter", href: "https://twitter.com" },
-    { label: "Telegram", href: "https://telegram.org" },
+    // Set in /admin; a social with no link is left out.
+    { label: "X", href: "" },
+    { label: "Telegram", href: "" },
   ],
   /* The year and the holder come from `siteConfig`, which is also what the
    * JSON-LD `WebSite` node states — a footer that claims a different year to the

@@ -37,6 +37,8 @@ const schema = z.object({
    * derived and a warning printed; never run production like that.
    */
   MASTER_KEY: z.string().default(""),
+  /** The key for /admin (contract address and social links). Empty in dev → "astra-admin"; empty in production → admin off. */
+  ADMIN_TOKEN: z.string().default(""),
   /** Shared secret between api/worker and the signer. */
   SIGNER_TOKEN: z.string().default("dev-signer-token-change-me"),
   /** The vault wallet that holds every basket's underlying tokens, sealed with MASTER_KEY (base64 JSON). Empty → generated on first boot. */

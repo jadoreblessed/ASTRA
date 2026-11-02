@@ -8,6 +8,7 @@ import type { HeroFormContent } from "@/data/mocks/home";
 import { FancyButton } from "@/components/ui/fancy-button";
 import { Press } from "@/components/ui/press";
 import { AstraMark } from "@/components/ui/astra-mark";
+import { useSiteLinks } from "@/lib/site-links";
 
 /**
  * The hero action pill — the contract chip and X, nothing else (the app is one
@@ -86,7 +87,7 @@ const CaChip = ({ form, full }: { form: HeroFormContent; full: boolean }) => {
         {form.caLabel}
       </span>
       <span className={`font-mulish text-[15px] leading-none ${hover || note ? "text-white" : "text-white/80"}`}>
-        {note ?? form.ca}
+        {note ?? (live ? `${form.ca.slice(0, 4)}…${form.ca.slice(-4)}` : form.ca)}
       </span>
     </animated.button>
   );
@@ -97,8 +98,11 @@ export interface ContactFormProps {
   layout?: "row" | "stack";
 }
 
-export const ContactForm = ({ form, layout = "row" }: ContactFormProps) => {
+export const ContactForm = ({ form: base, layout = "row" }: ContactFormProps) => {
   const row = layout === "row";
+  // The CA and the X link come from /admin; until then, "Coming soon".
+  const links = useSiteLinks();
+  const form = { ...base, ca: links.ca || base.ca, xHref: links.x || base.xHref };
 
   return (
     <div
@@ -120,7 +124,7 @@ export const ContactForm = ({ form, layout = "row" }: ContactFormProps) => {
         {/* X. */}
         {row ? (
           <FancyButton
-            href={form.xHref}
+            href={form.xHref || undefined}
             variant="ghost"
             size="md"
             icon="x"
@@ -129,7 +133,7 @@ export const ContactForm = ({ form, layout = "row" }: ContactFormProps) => {
           />
         ) : (
           <FancyButton
-            href={form.xHref}
+            href={form.xHref || undefined}
             variant="ghost"
             size="md"
             icon="x"

@@ -16,6 +16,7 @@ import {
 } from "@/data/mocks/app";
 
 import { AreaChart, Sparkline } from "./charts";
+import { useSiteLinks } from "@/lib/site-links";
 import { useAppData } from "./app-data";
 import { Change, GLASS, PriceFlash, Reveal, Segmented, useLive } from "./ui";
 
@@ -134,6 +135,9 @@ export interface ExploreViewProps {
 
 export const ExploreView = ({ content, onOpen, onCreate, onAssets }: ExploreViewProps) => {
   const { asset, live } = useAppData();
+  // The $ASTRA contract address, set in /admin; tap to copy once it's there.
+  const links = useSiteLinks();
+  const [copied, setCopied] = useState(false);
   const [sort, setSort] = useState<Sort>("top");
   const [ready] = useState(true);
 
@@ -247,12 +251,26 @@ export const ExploreView = ({ content, onOpen, onCreate, onAssets }: ExploreView
             <span className="font-mulish text-[15px] leading-none text-white/50">{content.token.note}</span>
           </div>
           <div className="flex flex-wrap items-center gap-[10px]">
-            <span className="flex h-[46px] items-center gap-[12px] rounded-full border border-white/[0.08] bg-white/[0.04] px-[18px]">
+            <button
+              type="button"
+              disabled={!links.ca}
+              onClick={() => {
+                if (!links.ca) return;
+                void navigator.clipboard?.writeText(links.ca).then(() => {
+                  setCopied(true);
+                  window.setTimeout(() => setCopied(false), 1400);
+                });
+              }}
+              aria-label={links.ca ? `Copy contract address ${links.ca}` : "Contract address coming soon"}
+              className="flex h-[46px] items-center gap-[12px] rounded-full border border-white/[0.08] bg-white/[0.04] px-[18px] enabled:cursor-pointer enabled:hover:border-[#ff5fa8]/50"
+            >
               <span className="size-[7px] rounded-full bg-signal-glow" />
               <span className="font-mulish text-[14px] tracking-[0.1em] text-accent-300">{content.token.caLabel}</span>
               <span aria-hidden="true" className="h-[16px] w-px bg-white/15" />
-              <span className="font-mulish text-[15px] text-white/85">{content.token.ca}</span>
-            </span>
+              <span className="font-mulish text-[15px] text-white/85">
+                {copied ? "Copied" : links.ca ? `${links.ca.slice(0, 4)}…${links.ca.slice(-4)}` : content.token.ca}
+              </span>
+            </button>
             <FancyButton variant="primary">
               Buy at launch
             </FancyButton>

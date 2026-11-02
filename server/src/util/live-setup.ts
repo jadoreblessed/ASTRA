@@ -24,6 +24,8 @@ writeFileSync(
 # (a password manager), never commit this file, never paste it anywhere.
 MASTER_KEY=${randomBytes(32).toString("base64")}
 SIGNER_TOKEN=${randomBytes(32).toString("hex")}
+# The key for /admin (contract address and social links).
+ADMIN_TOKEN=${randomBytes(18).toString("base64url")}
 
 # Its own database, apart from the dev one.
 PGLITE_DIR=./.data/live

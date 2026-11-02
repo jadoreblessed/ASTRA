@@ -1,3 +1,4 @@
+import { closeDb } from "./db.js";
 import { log } from "./logger.js";
 import { migrate } from "./util/migrate.js";
 import { startApi } from "./server.js";
@@ -14,6 +15,19 @@ async function main() {
   await startSigner();
   await startApi();
   await startWorker();
+}
+
+// Ctrl+C closes the embedded database cleanly — a hard kill mid-write can corrupt it.
+let stopping = false;
+for (const sig of ["SIGINT", "SIGTERM", "SIGBREAK"] as const) {
+  process.on(sig, () => {
+    if (stopping) return;
+    stopping = true;
+    log.info({ sig }, "shutting down");
+    void closeDb()
+      .catch(() => undefined)
+      .finally(() => process.exit(0));
+  });
 }
 
 main().catch((err) => {
