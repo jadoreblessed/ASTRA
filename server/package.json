@@ -19,8 +19,12 @@
     "migrate": "tsx --env-file-if-exists=.env src/util/migrate.ts",
     "keys": "tsx src/util/keys.ts",
     "live:setup": "tsx src/util/live-setup.ts",
-    "test": "node --experimental-strip-types --test tests/*.test.ts",
-    "typecheck": "tsc --noEmit"
+    "test": "node --import tsx --test tests/*.test.ts",
+    "typecheck": "tsc --noEmit",
+    "vault:export": "tsx --env-file-if-exists=.env src/util/vault-export.ts",
+    "vault:export:live": "tsx --env-file=.env.live src/util/vault-export.ts",
+    "check:devnet": "tsx src/util/chain-check.ts devnet",
+    "check:swaps": "tsx src/util/chain-check.ts swaps"
   },
   "dependencies": {
     "@electric-sql/pglite": "^0.5.13",

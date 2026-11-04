@@ -61,7 +61,7 @@ export const hero: HeroContent = {
       { symbol: "METAx", logo: "meta" },
     ],
     inner: [
-      { symbol: "ANTHx", logo: "anthropic" },
+      { symbol: "NFLXx", logo: "netflix" },
       { symbol: "BONK" },
       { symbol: "AMDx", logo: "amd" },
       { symbol: "WIF" },
@@ -129,7 +129,7 @@ export const services: ServicesContent = {
     {
       title: "Stocks",
       caption: "Built to hold",
-      stat: { value: 62, suffix: "", unit: "listed" },
+      stat: { value: 21, suffix: "", unit: "listed" },
       show: 5,
       logos: [
         { symbol: "NVDAx", logo: "nvidia" },
@@ -150,7 +150,7 @@ export const services: ServicesContent = {
     {
       title: "Memecoins",
       caption: "The whole meta",
-      stat: { value: 30, suffix: "", unit: "listed" },
+      stat: { value: 10, suffix: "", unit: "listed" },
       show: 4,
       logos: [
         { symbol: "BONK" },
@@ -170,7 +170,7 @@ export const services: ServicesContent = {
     {
       title: "Crypto",
       caption: "Always on",
-      stat: { value: 41, suffix: "", unit: "listed" },
+      stat: { value: 8, suffix: "", unit: "listed" },
       show: 4,
       logos: [
         { symbol: "wBTC", logo: "bitcoin" },
@@ -193,7 +193,7 @@ export const services: ServicesContent = {
       show: 3,
       logos: [
         { symbol: "SPYx", mark: "S&P" },
-        { symbol: "ANTHx", logo: "anthropic" },
+        { symbol: "NFLXx", logo: "netflix" },
         { symbol: "AMDx", logo: "amd" },
         { symbol: "QQQx", mark: "QQQ" },
         { symbol: "NVDAx", logo: "nvidia" },
@@ -249,14 +249,14 @@ export const timeline: TimelineContent = {
     {
       index: "02",
       title: "Pick",
-      body: "Choose a ready basket or build your own from 133 stocks, cryptos and memecoins.",
-      meta: "Up to 14 of 133 assets",
+      body: "Choose a ready basket or build your own from 39 stocks, cryptos and memecoins.",
+      meta: "Up to 14 of 39 assets",
       flow: [{ logos: [{ symbol: "NVDAx", logo: "nvidia" }, { symbol: "AAPLx", logo: "apple" }, { symbol: "wBTC", logo: "bitcoin" }, { symbol: "ETH", logo: "ethereum" }, { symbol: "BONK" }, { symbol: "TSLAx", logo: "tesla" }], more: 127 }],
     },
     {
       index: "03",
       title: "Pay",
-      body: "USDC or SOL. Every swap is price-limited and routed for the best on-chain fill.",
+      body: "USDC or SOL. Every swap is price-limited and routed through Jupiter for the best fill.",
       meta: "USDC or SOL · price-limited",
       flow: [{ logos: [{ symbol: "USDC", logo: "usdc" }, { symbol: "SOL", logo: "solana" }] }, { logos: [{ symbol: "NVDAx", logo: "nvidia" }, { symbol: "wBTC", logo: "bitcoin" }, { symbol: "BONK" }, { symbol: "GOOGLx", logo: "google" }] }],
     },
@@ -270,7 +270,7 @@ export const timeline: TimelineContent = {
     {
       index: "05",
       title: "Redeem",
-      body: "Burn the share, get the exact tokens back. Nobody can switch it off.",
+      body: "Burn the share, get the exact tokens back, whenever you want.",
       meta: "Burn → exact tokens back",
       flow: ["planet", { logos: [{ symbol: "NVDAx", logo: "nvidia" }, { symbol: "wBTC", logo: "bitcoin" }, { symbol: "WIF" }, { symbol: "AAPLx", logo: "apple" }] }],
     },
@@ -315,7 +315,7 @@ export const sitemap: SitemapContent = {
       {
         number: "03",
         title: "Vision",
-        subtitle: "wBTC, SOL and Anthropic",
+        subtitle: "wBTC, SOL, NVIDIA and Microsoft",
         target: screens.PRODUCT,
       },
     ],
@@ -323,13 +323,13 @@ export const sitemap: SitemapContent = {
       {
         number: "04",
         title: "Build your own",
-        subtitle: "Up to 14 of 133 assets",
+        subtitle: "Up to 14 of 39 assets",
         target: screens.INVESTORS,
       },
       {
         number: "05",
         title: "Single tokens",
-        subtitle: "133 listed, $ASTRA included",
+        subtitle: "39 listed",
         target: screens.SOCIAL,
       },
     ],
@@ -354,20 +354,20 @@ export const brief: BriefContent = {
     {
       num: "01",
       kicker: "Approve",
-      heading: "One slide, two approvals",
-      body: "You check the transaction and slide to sign — one approval for the swaps, one for the mint, and only ever for ASTRA's own program on Solana.",
+      heading: "One slide, one approval",
+      body: "You check the order and slide to confirm. In your wallet it's one plain transaction to the ASTRA vault, readable before you sign, and nothing else.",
     },
     {
       num: "02",
       kicker: "Route",
       heading: "Best price on every swap",
-      body: "Each swap is routed for the best on-chain fill and price-limited against a live quote. Miss the limit and nothing mints; the tokens already bought stay yours.",
+      body: "Each swap is routed through Jupiter and price-limited against a live quote. A swap that misses its limit doesn't fill, and that part of your payment comes back.",
     },
     {
       num: "03",
       kicker: "Settle",
       heading: "One token, in your wallet",
-      body: "Your basket shares land in your own wallet in under a second. Redeem for the exact tokens inside at any time — nobody can switch it off.",
+      body: "Your basket shares land in your own wallet once the swaps fill. Redeem for the exact tokens inside at any time.",
     },
   ],
 };
@@ -392,15 +392,15 @@ export const impact: ImpactContent = {
     {
       value: "100",
       suffix: "%",
-      label: "Redeemable — nobody can switch it off",
+      label: "Redeemable for the exact tokens inside",
     },
     {
-      value: ">10",
+      value: "0.5",
       suffix: "%",
-      label: "Of $ASTRA supply already burned",
+      label: "Fee on buys and sells, funding the $ASTRA buyback & burn. Redeeming is free",
     },
     {
-      value: "133",
+      value: "39",
       suffix: " assets",
       label: "Stocks, crypto and memecoins listed",
     },
@@ -446,11 +446,11 @@ export const logoScene: LogoSceneContent = {
   subtitle:
     "Every market pulled into a single token — held and redeemed in your own wallet.",
   left: [
-    { index: "01", prefix: "", value: 100, suffix: "%", label: "Redeemable — nobody can switch it off", logos: [{ symbol: "NVDAx", logo: "nvidia" }, { symbol: "wBTC", logo: "bitcoin" }, { symbol: "BONK" }, { symbol: "AAPLx", logo: "apple" }] },
-    { index: "02", prefix: ">", value: 10, suffix: "%", label: "Of $ASTRA supply already burned" },
+    { index: "01", prefix: "", value: 100, suffix: "%", label: "Redeemable for the exact tokens inside", logos: [{ symbol: "NVDAx", logo: "nvidia" }, { symbol: "wBTC", logo: "bitcoin" }, { symbol: "BONK" }, { symbol: "AAPLx", logo: "apple" }] },
+    { index: "02", prefix: "", value: 0.5, suffix: "%", label: "Fee, funding the $ASTRA buyback & burn" },
   ],
   right: [
-    { index: "03", prefix: "", value: 133, suffix: "", label: "Stocks, crypto and memecoins listed", logos: [{ symbol: "TSLAx", logo: "tesla" }, { symbol: "SOL", logo: "solana" }, { symbol: "GOOGLx", logo: "google" }, { symbol: "ETH", logo: "ethereum" }, { symbol: "WIF" }], more: 128 },
+    { index: "03", prefix: "", value: 39, suffix: "", label: "Stocks, crypto and memecoins listed", logos: [{ symbol: "TSLAx", logo: "tesla" }, { symbol: "SOL", logo: "solana" }, { symbol: "GOOGLx", logo: "google" }, { symbol: "ETH", logo: "ethereum" }, { symbol: "WIF" }], more: 128 },
     { index: "04", prefix: "<", value: 2, suffix: " min", label: "Price freshness — or no trade" },
   ],
   word: "ONE TOKEN",
@@ -513,8 +513,7 @@ export const footer: FooterContent = {
     { label: "Proof", target: screens.IMPACT },
   ],
   social: [
-    { label: "Email", href: "mailto:hello@astra.xyz" },
-    // Set in /admin; a social with no link is left out.
+        // Set in /admin; a social with no link is left out.
     { label: "X", href: "" },
     { label: "Telegram", href: "" },
   ],

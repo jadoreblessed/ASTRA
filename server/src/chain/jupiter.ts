@@ -110,23 +110,31 @@ export async function quote(inputMint: string, outputMint: string, amountRaw: bi
   );
 }
 
-/** A serialized, unsigned swap transaction for `owner` (base64). */
-export async function swapTransaction(q: JupQuote, owner: string): Promise<string> {
-  const res = await fetch(`${config.JUPITER_API}/swap/v1/swap`, {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    signal: AbortSignal.timeout(TIMEOUT_MS),
-    body: JSON.stringify({
-      quoteResponse: q,
-      userPublicKey: owner,
-      wrapAndUnwrapSol: true,
-      dynamicComputeUnitLimit: true,
-      // a small, bounded tip so swaps land without overpaying.
-      prioritizationFeeLamports: { priorityLevelWithMaxLamports: { maxLamports: 20_000, priorityLevel: "medium" } },
-    }),
+export interface SwapTx {
+  /** Serialized and unsigned, base64. */
+  tx: string;
+  lastValidBlockHeight: number;
+}
+
+/** A swap transaction for `owner`, ready to sign. */
+export async function swapTransaction(q: JupQuote, owner: string): Promise<SwapTx> {
+  return paced("trade", async () => {
+    const res = await fetch(`${config.JUPITER_API}/swap/v1/swap`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      signal: AbortSignal.timeout(TIMEOUT_MS),
+      body: JSON.stringify({
+        quoteResponse: q,
+        userPublicKey: owner,
+        wrapAndUnwrapSol: true,
+        dynamicComputeUnitLimit: true,
+        // a small, bounded tip so swaps land without overpaying.
+        prioritizationFeeLamports: { priorityLevelWithMaxLamports: { maxLamports: 20_000, priorityLevel: "medium" } },
+      }),
+    });
+    if (!res.ok) throw new Error(`jupiter swap → ${res.status}`);
+    const body = (await res.json()) as { swapTransaction?: string; lastValidBlockHeight?: number };
+    if (!body.swapTransaction || !body.lastValidBlockHeight) throw new Error("jupiter swap: no transaction");
+    return { tx: body.swapTransaction, lastValidBlockHeight: body.lastValidBlockHeight };
   });
-  if (!res.ok) throw new Error(`jupiter swap → ${res.status}`);
-  const body = (await res.json()) as { swapTransaction?: string };
-  if (!body.swapTransaction) throw new Error("jupiter swap: no transaction");
-  return body.swapTransaction;
 }

@@ -69,8 +69,8 @@ export function generateMetadata({
       card: "summary_large_image",
       title: resolvedTitle,
       description,
-      site: twitterHandle,
-      creator: twitterHandle,
+      site: twitterHandle || undefined,
+      creator: twitterHandle || undefined,
       images: [ogImage],
     },
     /* Icons are intentionally omitted: setting `icons` here would override Next's

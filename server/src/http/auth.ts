@@ -55,6 +55,9 @@ async function sendMail(to: string, code: string): Promise<boolean> {
   return true;
 }
 
+/** Whether email login can actually deliver a code here. */
+export const emailLoginOn = () => Boolean(config.RESEND_API_KEY) || !isProd;
+
 /** Returns the code only in local dev with no mail provider, so the UI can show it. */
 export async function startEmail(email: string): Promise<{ devCode?: string }> {
   const code = sixDigits();

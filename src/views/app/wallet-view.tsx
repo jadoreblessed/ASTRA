@@ -47,9 +47,19 @@ const FEATURES: {
   },
   {
     title: "Redeem any time",
-    body: "Burn a share and the vault sends you the exact tokens it stands for. No one can switch that off.",
+    body: "Burn a share and the vault sends you the exact tokens it stands for.",
   },
 ];
+
+const ORDER_STATUS: Record<string, string> = {
+  paid: "Paid",
+  executing: "Filling",
+  settling: "Sending",
+  filled: "Done",
+  refunded: "Sent back",
+  failed: "Needs a look",
+  refused: "Refused",
+};
 
 const INPUT =
   "h-[52px] rounded-full border border-white/[0.12] bg-white/[0.04] px-[20px] font-mulish text-[15px] text-white outline-none placeholder:text-white/35 focus:border-accent-400/60";
@@ -80,7 +90,9 @@ const Copy = ({ text }: { text: string }) => {
 };
 
 const LoginCard = () => {
-  const { live, login } = useAppData();
+  const { live, login, config } = useAppData();
+  // In production, until mail is set up, a code could never arrive: wallets only.
+  const emailOn = config?.emailLogin ?? true;
   const [step, setStep] = useState<"email" | "code">("email");
   const [email, setEmail] = useState("");
   const [code, setCode] = useState("");
@@ -157,7 +169,7 @@ const LoginCard = () => {
         </p>
       </div>
 
-      {step === "email" ? (
+      {!emailOn ? null : step === "email" ? (
         <form onSubmit={onEmail} className="flex flex-col gap-[12px]">
           <input
             type="email"
@@ -211,7 +223,7 @@ const LoginCard = () => {
 
       <div className="flex items-center gap-[12px] font-mulish text-[13px] text-white/40">
         <span className="h-px flex-1 bg-white/[0.08]" />
-        or connect a wallet
+        {emailOn ? "or connect a wallet" : "Connect a wallet"}
         <span className="h-px flex-1 bg-white/[0.08]" />
       </div>
 
@@ -240,7 +252,7 @@ const LoginCard = () => {
 };
 
 const AccountCard = () => {
-  const { user, positions, logout } = useAppData();
+  const { user, positions, orders, logout } = useAppData();
   const [secret, setSecret] = useState<string | null>(null);
   const [note, setNote] = useState<string | null>(null);
   if (!user) return null;
@@ -291,6 +303,28 @@ const AccountCard = () => {
           </span>
         )}
       </div>
+
+      {orders.length > 0 && (
+        <div className="flex flex-col gap-[10px]">
+          <span className="font-mulish text-[14px] text-white/50">Recent orders</span>
+          <ul className="m-0 flex list-none flex-col gap-[8px] p-0">
+            {orders.map((o) => (
+              <li key={o.id} className="flex items-center justify-between gap-[12px] font-mulish text-[14px] text-white/80">
+                <span className="truncate">
+                  {o.side === "buy" ? "Bought" : o.side === "sell" ? "Sold" : "Redeemed"} ${o.code}
+                </span>
+                {o.sig ? (
+                  <a href={`https://solscan.io/tx/${o.sig}`} target="_blank" rel="noopener noreferrer" className="shrink-0 text-white/50 hover:text-white">
+                    {ORDER_STATUS[o.status] ?? o.status}
+                  </a>
+                ) : (
+                  <span className="shrink-0 text-white/50">{ORDER_STATUS[o.status] ?? o.status}</span>
+                )}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       <div className="flex flex-col gap-[10px]">
         <span className="font-mulish text-[14px] text-white/50">

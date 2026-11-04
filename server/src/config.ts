@@ -15,6 +15,8 @@ const bool = z
 const schema = z.object({
   NODE_ENV: z.enum(["development", "production", "test"]).default("development"),
   PORT: z.coerce.number().default(8080),
+  /** The API's address. The server setup keeps it on 127.0.0.1, behind Caddy. */
+  HOST: z.string().default("0.0.0.0"),
   SIGNER_PORT: z.coerce.number().default(8081),
   SIGNER_HOST: z.string().default("127.0.0.1"),
   LOG_LEVEL: z.string().default("info"),
@@ -64,6 +66,10 @@ const schema = z.object({
   MAX_TOTAL_SPEND_LAMPORTS: z.coerce.number().int().default(50_000_000),
   /** Largest single order, in USD. */
   MAX_ORDER_USD: z.coerce.number().default(5),
+  /** The platform's commission on buys and sells, in basis points. Redeeming is free. */
+  PLATFORM_FEE_BPS: z.coerce.number().int().min(0).max(500).default(50),
+  /** Where /admin can withdraw the commission to. Nowhere else; empty → withdrawing is off. */
+  TREASURY_WALLET: z.string().trim().default(""),
   /** Price limit on every swap leg, basis points. */
   MAX_SLIPPAGE_BPS: z.coerce.number().int().default(100),
   /** Prices older than this refuse to trade ("price freshness < 2 min or no trade"). */

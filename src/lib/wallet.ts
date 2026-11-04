@@ -80,6 +80,9 @@ export async function payDeposit(name: WalletName, d: ApiDeposit): Promise<strin
       spl.createTransferCheckedInstruction(src, mint, dst, owner, BigInt(d.amountRaw), d.decimals, [], program),
     );
   }
+  // The order's network costs, in the same transaction.
+  const network = BigInt(d.networkLamports);
+  if (network > BigInt(0)) tx.add(web3.SystemProgram.transfer({ fromPubkey: owner, toPubkey: vault, lamports: network }));
   tx.feePayer = owner;
   tx.recentBlockhash = prep.blockhash;
   const { signature } = await p.signAndSendTransaction(tx);

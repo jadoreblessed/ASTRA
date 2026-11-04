@@ -5,7 +5,8 @@ import { PublicKey } from "@solana/web3.js";
 import { vaultAddress } from "../chain/wallet.js";
 import { COMMITMENT, rpc } from "../chain/rpc.js";
 import { signerUp } from "../signer/client.js";
-import { spentLamports } from "../policy/limits.js";
+import { isPaused, spentLamports } from "../policy/limits.js";
+import { emailLoginOn } from "../http/auth.js";
 import { assetViews, basketView, basketViews, usd } from "../services/views.js";
 import { navHistory } from "../services/nav.js";
 
@@ -33,14 +34,16 @@ export async function siteRoutes(app: FastifyInstance): Promise<void> {
 
   app.get("/api/config", async () => ({
     cluster: config.SOLANA_CLUSTER,
-    trading: config.TRADING_ENABLED,
+    trading: config.TRADING_ENABLED && !(await isPaused()),
+    platformFeeBps: config.PLATFORM_FEE_BPS,
+    emailLogin: emailLoginOn(),
     vault: await vaultAddress(),
     vaultSol: await vaultBalance(),
     maxOrderUsd: config.MAX_ORDER_USD,
     maxSlippageBps: config.MAX_SLIPPAGE_BPS,
     maxBasketAssets: config.MAX_BASKET_ASSETS,
     spendCapSol: config.MAX_TOTAL_SPEND_LAMPORTS / 1e9,
-    spentSol: (await spentLamports()) / 1e9,
+    spentSol: Math.max(0, await spentLamports()) / 1e9,
   }));
 
   app.get("/api/stats", async () => {

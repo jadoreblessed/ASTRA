@@ -87,7 +87,7 @@ export const AssetsView = ({ content, query, onQuery }: AssetsViewProps) => {
         </div>
         <dl className="m-0 flex gap-[40px]">
           {[
-            ["Listed", live ? String(content.assets.length) : "133"],
+            ["Listed", String(content.assets.length)],
             ["Held in baskets", live ? held : "$2.41M"],
           ].map(([k, v]) => (
             <div key={k} className="flex flex-col-reverse gap-[10px] text-right max-pad-sm:text-left">

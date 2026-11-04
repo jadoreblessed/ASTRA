@@ -6,10 +6,10 @@ redeemable token. This is the API, the worker and the signer behind `/app`.
 **No custom on-chain program.** A basket's share is a plain SPL mint whose
 authority is the vault; buying swaps into the basket through Jupiter, redeeming
 burns the share and sends the exact tokens back. Nothing to deploy, nothing to
-audit on chain beyond the token program — and the whole smoke test fits in
-**0.05 SOL** (see [TESTING.md](TESTING.md)).
+audit on chain beyond the token program — and the platform's own spending is
+capped at **0.05 SOL** for life (see [TESTING.md](TESTING.md)).
 
-Three processes, one image (as in BUREAU):
+Three processes (as in BUREAU):
 
 | process | what it does | reachable from |
 |---|---|---|
@@ -38,7 +38,7 @@ codes are printed to the log (and offered in the UI, dev only), and trading is
 
 | | |
 |---|---|
-| Assets | ~40 listed tokens, mints verified against Jupiter's list; live price, 24h change, market cap, volume, holders |
+| Assets | 39 listed tokens, mints verified against Jupiter's list; live price, 24h change, market cap, volume, holders |
 | Baskets | 6 curated + anything users build; share price = Σ units × live price; 90-day daily chart from real closes |
 | Login | email code → a Solana wallet is made (sealed with `MASTER_KEY`, exportable for 10 min after login); or Phantom / Solflare sign-in |
 | Quotes | every leg quoted live by Jupiter with the price limit: route, impact, minimum out, price age |
@@ -51,15 +51,31 @@ codes are printed to the log (and offered in the UI, dev only), and trading is
 2. `POST /api/orders` — refused with `trading_off` until the switch is on.
    Otherwise returns the deposit: vault address, mint, exact amount.
 3. Pay:
-   - Phantom/Solflare: **one plain transfer** to the vault, readable in the
-     wallet; the site posts its signature to `/api/orders/:id/deposit` and the
-     API reads the chain to confirm the vault received the full amount from
-     that wallet.
+   - Phantom/Solflare: **one plain transaction** to the vault, readable in the
+     wallet: the order and the network fee together. The site posts its
+     signature to `/api/orders/:id/deposit` and the API reads the chain to
+     confirm the vault received both from that wallet.
    - Email wallet: `/api/orders/:id/pay` — the signer signs the transfer from
-     the user's own sealed wallet (the user's SOL pays the fee).
+     the user's own sealed wallet.
 4. The worker hands the paid order to the signer, which re-checks every limit
-   and executes: each leg price-limited (`MAX_SLIPPAGE_BPS`), every price under
-   `PRICE_MAX_AGE_SEC` old, the order under `MAX_ORDER_USD`.
+   and executes, one order at a time: each leg price-limited
+   (`MAX_SLIPPAGE_BPS`), every price under `PRICE_MAX_AGE_SEC` old, the order
+   under `MAX_ORDER_USD`.
+5. Whatever is owed to the user (shares, refunds, tokens, proceeds) goes through
+   the `payouts` queue, which retries until it lands and can't pay twice. The
+   order stays `settling` until the queue is empty.
+
+## Who pays for what
+
+- **The buyer** prepays network costs in SOL in the same transaction as the
+  order (`network_fee_lamports`), so a repeat buy costs the platform nothing.
+  What wasn't used comes back when an order is refunded.
+- **The platform** pays the shared setup of curated baskets (share mint, vault
+  token accounts) while the budget covers it; after that the first buyer does.
+  User-made baskets are always paid by the buyer.
+- **The commission** is `PLATFORM_FEE_BPS` (0.5%) on buys and sells, nothing on
+  redeems. It accrues in `fee_ledger`; `/admin` sends it to `TREASURY_WALLET` or
+  spends it on buyback & burn of the contract address set there.
 
 ## The switches and caps
 
@@ -69,26 +85,29 @@ on, the caps below) and `npm run dev:live` runs on it — see
 
 ```
 TRADING_ENABLED=false            # anything that moves money
-MAX_TOTAL_SPEND_LAMPORTS=50000000   # 0.05 SOL — lifetime cap on platform fees + rent
+MAX_TOTAL_SPEND_LAMPORTS=50000000   # 0.05 SOL — lifetime cap on what the platform itself pays
 MAX_ORDER_USD=5
+PLATFORM_FEE_BPS=50
+TREASURY_WALLET=                 # the only place /admin can withdraw commission to
 MAX_SLIPPAGE_BPS=100
 PRICE_MAX_AGE_SEC=120
 ```
 
-Every SOL the vault pays is written to `spend_ledger`; the signer refuses any
-send that would take the total past the cap. `/api/config` shows spent vs cap.
+Every SOL the vault pays is written to `spend_ledger`, and what buyers prepaid
+is credited there; the signer refuses any send that would take the net past the
+cap, counting what's still on its way. Money owed to a user goes out regardless
+of the cap and the pause. `/api/config` shows spent vs cap.
 
 ## Production
 
-```bash
-cp .env.example .env    # fill MASTER_KEY + SIGNER_TOKEN (npm run keys), RESEND_API_KEY, a paid RPC
-docker compose up -d
-curl localhost:8080/health
-```
+[`deploy/README.md`](../deploy/README.md): one script on a clean Ubuntu server,
+no Docker. Postgres, Node, Caddy for HTTPS, systemd, a daily database dump.
+`Dockerfile` and `docker-compose.yml` here are older and not what the deploy uses.
 
 **`MASTER_KEY` is the whole system.** It opens the vault and every email
-wallet. Keep a copy off the server; never commit it. Back up the database too —
-the sealed vault key lives in `kv.vault` (or set `VAULT_SEALED`).
+wallet. Keep a copy off the server; never commit it. The setup keeps a sealed
+copy of the vault key in `VAULT_SEALED`, next to `MASTER_KEY`, so losing the
+database can't lose the vault.
 
 ## Honest limits
 
@@ -96,7 +115,8 @@ the sealed vault key lives in `kv.vault` (or set `VAULT_SEALED`).
   in the database (`basket_holdings.vault_raw`); redemption is enforced by the
   service, not by a program. "Nobody can switch it off" needs an on-chain
   program — the upgrade path, once there is volume to justify its deploy cost.
-- Rebalancing is described per basket but not executed yet.
+- Baskets hold fixed weights. There is no rebalancing: it would spend SOL
+  forever, against the cap.
 - Failed legs are refunded automatically; an order a crash stopped
   mid-execution is parked for a manual look, not retried.
 - Not audited. Keep `MAX_ORDER_USD` tiny until it is.

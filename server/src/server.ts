@@ -34,7 +34,7 @@ export async function startApi(): Promise<void> {
   await migrate();
   await seed();
   const app = await buildApi();
-  await app.listen({ port: config.PORT, host: "0.0.0.0" });
+  await app.listen({ port: config.PORT, host: config.HOST });
   log.info({ port: config.PORT, trading: config.TRADING_ENABLED, cluster: config.SOLANA_CLUSTER }, "api listening");
 }
 

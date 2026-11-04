@@ -50,7 +50,6 @@ export const CATALOG: CatalogAsset[] = [
   stock("JPMx", "JPMorgan", undefined, "JP"),
   stock("LLYx", "Eli Lilly", undefined, "L"),
   stock("GLDx", "Gold", undefined, "Au"),
-  stock("ANTHx", "Anthropic", "anthropic"),
 
   // ------------------------------------------------------------- crypto
   { symbol: "SOL", name: "Solana", kind: "crypto", logo: "solana", mint: SOL_MINT },
@@ -106,15 +105,15 @@ export const CURATED: CatalogBasket[] = [
     id: "vision",
     code: "VIS",
     name: "Vision",
-    description: "Bitcoin, Solana and pre-IPO Anthropic — the frontier.",
+    description: "Bitcoin, Solana and the AI leaders — the frontier.",
     rebalance: "Every 30 days",
-    weights: { wBTC: 34, SOL: 26, ANTHx: 22, NVDAx: 18 },
+    weights: { wBTC: 34, SOL: 26, NVDAx: 22, MSFTx: 18 },
   },
   {
     id: "meme-index",
     code: "MEME",
     name: "Meme Index",
-    description: "The Solana meta in one bag — rebalanced so no dog runs away.",
+    description: "The Solana meta in one bag.",
     rebalance: "Every 7 days or 10% drift",
     weights: { BONK: 30, WIF: 30, POPCAT: 20, FARTCOIN: 20 },
   },

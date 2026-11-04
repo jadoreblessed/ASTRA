@@ -41,7 +41,7 @@ const makeDriver = async (): Promise<Driver> => {
 
   const { PGlite, types } = await import("@electric-sql/pglite");
   const { mkdirSync } = await import("node:fs");
-  mkdirSync(config.PGLITE_DIR, { recursive: true });
+  if (!config.PGLITE_DIR.startsWith("memory://")) mkdirSync(config.PGLITE_DIR, { recursive: true });
   const db = new PGlite(config.PGLITE_DIR, {
     parsers: {
       [types.NUMERIC]: (v: string) => (v === null ? null : Number(v)),

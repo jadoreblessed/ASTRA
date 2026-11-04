@@ -43,7 +43,6 @@ export interface Basket {
   tvl: string;
   holders: number;
   created: string;
-  rebalance: string;
   holdings: Holding[];
   /** 90 daily closes, oldest first — drives the sparkline and the chart. */
   history: number[];
@@ -88,9 +87,9 @@ export const app: AppContent = {
   subtitle:
     "Stocks, crypto and memecoins in one token, priced live from what each basket holds. Buy one with USDC or SOL, or build your own.",
   stats: [
-    { label: "Value locked", value: 2.41, prefix: "$", suffix: "M" },
+    { label: "Value locked", value: 0, prefix: "$", suffix: "" },
     { label: "Baskets", value: 6, prefix: "", suffix: "" },
-    { label: "Holders", value: 9620, prefix: "", suffix: "" },
+    { label: "Assets listed", value: 39, prefix: "", suffix: "" },
   ],
   token: {
     symbol: "$ASTRA",
@@ -116,7 +115,6 @@ export const app: AppContent = {
     { symbol: "COINx", name: "Coinbase", kind: "stock", logo: "coinbase", price: 318.4, change: 2.2, mcap: "$8.7M", volume: "$290K", holders: 5410, baskets: 1 },
     { symbol: "HOODx", name: "Robinhood", kind: "stock", logo: "robinhood", price: 118.6, change: 5.1, mcap: "$6.2M", volume: "$355K", holders: 4980, baskets: 1 },
     { symbol: "SPYx", name: "S&P 500", kind: "stock", mark: "S&P", price: 668.2, change: 0.4, mcap: "$71.8M", volume: "$2.8M", holders: 29400, baskets: 1 },
-    { symbol: "ANTHx", name: "Anthropic", kind: "stock", logo: "anthropic", price: 412.0, change: 1.4, mcap: "$18.2M", volume: "$720K", holders: 12880, baskets: 1 },
     { symbol: "wBTC", name: "Bitcoin", kind: "crypto", logo: "bitcoin", price: 112430, change: 1.2, mcap: "$412M", volume: "$18.4M", holders: 96200, baskets: 2 },
     { symbol: "SOL", name: "Solana", kind: "crypto", logo: "solana", price: 196.8, change: 3.1, mcap: "$1.1B", volume: "$42.7M", holders: 410200, baskets: 2 },
     { symbol: "ETH", name: "Ethereum", kind: "crypto", logo: "ethereum", price: 4210.5, change: 0.8, mcap: "$264M", volume: "$9.6M", holders: 58300, baskets: 1 },
@@ -133,10 +131,9 @@ export const app: AppContent = {
       description: "The names building the compute buildout, chips to models.",
       price: 1042.6,
       change: 4.2,
-      tvl: "$612.4K",
-      holders: 1284,
+      tvl: "$0.00",
+      holders: 0,
       created: "Oct 14",
-      rebalance: "Every 30 days or 5% drift",
       holdings: [
         { symbol: "NVDAx", weight: 24 },
         { symbol: "AVGOx", weight: 18 },
@@ -154,10 +151,9 @@ export const app: AppContent = {
       description: "US equities against bitcoin, eighty to twenty.",
       price: 986.1,
       change: 1.1,
-      tvl: "$1.21M",
-      holders: 2047,
+      tvl: "$0.00",
+      holders: 0,
       created: "Oct 14",
-      rebalance: "Every 7 days",
       holdings: [
         { symbol: "SPYx", weight: 80 },
         { symbol: "wBTC", weight: 20 },
@@ -168,18 +164,17 @@ export const app: AppContent = {
       id: "vision",
       code: "VIS",
       name: "Vision",
-      description: "Bitcoin, Solana and pre-IPO Anthropic — the frontier.",
+      description: "Bitcoin, Solana and the AI leaders — the frontier.",
       price: 1318.8,
       change: 6.8,
-      tvl: "$384.9K",
-      holders: 836,
+      tvl: "$0.00",
+      holders: 0,
       created: "Oct 16",
-      rebalance: "Every 30 days",
       holdings: [
         { symbol: "wBTC", weight: 34 },
         { symbol: "SOL", weight: 26 },
-        { symbol: "ANTHx", weight: 22 },
-        { symbol: "NVDAx", weight: 18 },
+        { symbol: "NVDAx", weight: 22 },
+        { symbol: "MSFTx", weight: 18 },
       ],
       history: walk(47, 1318.8, 0.52),
     },
@@ -187,13 +182,12 @@ export const app: AppContent = {
       id: "meme-index",
       code: "MEME",
       name: "Meme Index",
-      description: "The Solana meta in one bag — rebalanced so no dog runs away.",
+      description: "The Solana meta in one bag.",
       price: 214.3,
       change: 9.4,
-      tvl: "$96.2K",
-      holders: 3410,
+      tvl: "$0.00",
+      holders: 0,
       created: "Oct 19",
-      rebalance: "Every 7 days or 10% drift",
       holdings: [
         { symbol: "BONK", weight: 30 },
         { symbol: "WIF", weight: 30 },
@@ -209,10 +203,9 @@ export const app: AppContent = {
       description: "The on-ramps and the chains they settle on.",
       price: 512.7,
       change: 2.9,
-      tvl: "$228.1K",
-      holders: 612,
+      tvl: "$0.00",
+      holders: 0,
       created: "Oct 21",
-      rebalance: "Every 30 days",
       holdings: [
         { symbol: "COINx", weight: 30 },
         { symbol: "HOODx", weight: 25 },
@@ -228,10 +221,9 @@ export const app: AppContent = {
       description: "Five megacaps, equal parts, one token.",
       price: 887.4,
       change: -0.3,
-      tvl: "$154.7K",
-      holders: 441,
+      tvl: "$0.00",
+      holders: 0,
       created: "Oct 22",
-      rebalance: "Every 90 days",
       holdings: [
         { symbol: "AAPLx", weight: 20 },
         { symbol: "GOOGLx", weight: 20 },

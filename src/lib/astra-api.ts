@@ -74,6 +74,9 @@ export interface ApiConfig {
   spendCapSol: number;
   spentSol: number;
   vaultSol?: number | null;
+  platformFeeBps: number;
+  /** False in production until a mail provider is set: the app offers wallets only. */
+  emailLogin: boolean;
 }
 
 export interface ApiStats {
@@ -96,6 +99,17 @@ export interface ApiPosition {
   code: string;
   name: string;
   shares: number;
+}
+
+export interface ApiOrder {
+  id: string;
+  code: string;
+  side: "buy" | "sell" | "redeem";
+  currency: "USDC" | "SOL";
+  amount: number;
+  status: string;
+  sig: string | null;
+  at: string;
 }
 
 export interface QuoteLeg {
@@ -125,6 +139,13 @@ export interface ApiQuote {
   priceAgeSec: number | null;
   trading: boolean;
   swaps: number;
+  /** The commission, in the order's currency. Redeeming has none. */
+  fee: number;
+  feeBps: number;
+  /** What the network will cost the buyer, in SOL, on top; null if it couldn't be read. */
+  networkSol: number | null;
+  /** Who opens this basket's shared accounts, if they aren't open yet. */
+  setupPaidBy: "platform" | "buyer" | "none" | null;
 }
 
 export interface ApiDeposit {
@@ -133,6 +154,8 @@ export interface ApiDeposit {
   amount: number;
   amountRaw: string;
   decimals: number;
+  /** Sent to the vault in the same transaction: the order's network costs. */
+  networkLamports: string;
 }
 
 /* ------------------------------------------------------------ deposits */

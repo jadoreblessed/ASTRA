@@ -47,6 +47,12 @@ interface StoredVault {
   ciphertext: string;
 }
 
+/** The sealed vault as VAULT_SEALED wants it, so a copy can live outside the database. */
+export async function sealedVaultForEnv(): Promise<string> {
+  await vaultAddress();
+  return Buffer.from(JSON.stringify(await readStored()), "utf8").toString("base64");
+}
+
 const readStored = async (): Promise<StoredVault | null> => {
   if (config.VAULT_SEALED) return JSON.parse(Buffer.from(config.VAULT_SEALED, "base64").toString("utf8")) as StoredVault;
   const row = await one<{ value: string }>(`SELECT value FROM kv WHERE key = 'vault'`);

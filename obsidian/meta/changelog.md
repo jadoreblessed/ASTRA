@@ -1,12 +1,33 @@
 ---
 tags: [meta, changelog]
-updated: 2026-10-06
+updated: 2026-11-04
 ---
 
 # Changelog
 
 Chronological log of notable changes to the project. Newest first.
 This is a human-curated log — not a mirror of `git log`.
+
+## 2026-11-04 — the backend, ready for a server (ADR-0045)
+
+The owner: "fix absolutely everything, fit the whole program in 0.05 SOL, we take a
+commission, and prepare it so all that's left is to deploy and test".
+
+- **Costs:** buyers prepay network costs in the order's own transaction, credited to
+  `spend_ledger`, so `MAX_TOTAL_SPEND_LAMPORTS` caps the platform's net spend. Six
+  curated baskets' setup is about 0.036 SOL at live mainnet rent. Cost is read from
+  the confirmed transaction, not from balance changes.
+- **Commission:** `PLATFORM_FEE_BPS` (0.5%) on buys and sells, none on redeems;
+  `/admin` withdraws it to `TREASURY_WALLET` or spends it on buyback & burn.
+- **Payouts:** everything owed to a user goes through the `payouts` queue, which
+  retries, survives restarts and can't pay twice. New order status `settling`.
+- **Overlap:** orders run one at a time in the signer, and spends in flight count
+  against the budget, so a slow order can't open two share mints or overrun the cap.
+- **Site:** false claims and fake numbers removed (rebalancing, ">10% burned",
+  "nobody can switch it off", ANTHx); 39 assets; fee and network rows in the quote;
+  recent orders in the wallet view; `/admin` got pause, money and attention blocks.
+- **Deploy:** `deploy/` sets up a clean Ubuntu server with no Docker: Postgres, Node,
+  Caddy, systemd, daily dump. Instructions in `deploy/README.md`.
 
 ## 2026-10-06 — the phone menu's foot clears Safari's toolbar (owner review 3, D-037, optimize/pass-4)
 

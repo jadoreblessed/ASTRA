@@ -30,8 +30,12 @@ export const checkBudget = (l: Limits, spentLamports: number, estimateLamports: 
         `Platform spend cap reached: ${(spentLamports / 1e9).toFixed(4)} of ${(l.maxTotalSpendLamports / 1e9).toFixed(4)} SOL used.`,
       );
 
+/** Too small to split across a basket and still be worth its transactions. */
+export const MIN_ORDER_USD = 0.5;
+
 export const checkOrderSize = (l: Limits, usd: number): Verdict => {
   if (!Number.isFinite(usd) || usd <= 0) return no("amount", "Enter an amount above zero.");
+  if (usd < MIN_ORDER_USD) return no("amount", `The smallest order is $${MIN_ORDER_USD.toFixed(2)}.`);
   return usd <= l.maxOrderUsd ? OK : no("amount", `Orders are capped at $${l.maxOrderUsd} for now.`);
 };
 
@@ -54,6 +58,24 @@ export const checkBasketShape = (l: Limits, weights: { symbol: string; weight_bp
   const total = weights.reduce((s, w) => s + w.weight_bps, 0);
   return total === 10_000 ? OK : no("shape", `Weights must add up to 100% (now ${(total / 100).toFixed(1)}%).`);
 };
+
+/** The commission on an amount, rounded down. */
+export const platformFee = (raw: bigint, bps: number): bigint => (raw * BigInt(bps)) / 10_000n;
+
+/** When only part of a buy fills, the commission is only on that part. */
+export const feeOnFilled = (fee: bigint, filled: bigint, investable: bigint): bigint =>
+  investable === 0n ? 0n : (fee * filled) / investable;
+
+/** Left in hand so refunds can always go out after the platform has paid for setup. */
+export const SETUP_MARGIN = 2_000_000;
+
+/**
+ * Whether the platform's own budget opens a basket's shared accounts, or the
+ * first buyer does. Only curated baskets draw on it, and only while it covers
+ * the whole cost, so the lifetime total can't pass the cap.
+ */
+export const setupPaidByPlatform = (l: Limits, netSpent: number, freeLamports: number, setup: number, curated: boolean): boolean =>
+  curated && netSpent + setup + SETUP_MARGIN <= l.maxTotalSpendLamports && freeLamports >= setup + SETUP_MARGIN;
 
 /** Splits `amount` across weights in base units; the rounding dust goes to the largest leg. */
 export function splitByWeight(amount: bigint, weights: number[]): bigint[] {

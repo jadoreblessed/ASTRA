@@ -74,14 +74,18 @@ async function placeOrder(
     await confirmDeposit(order.id, signature);
   }
   note("Paid — filling your order…");
-  for (let i = 0; i < 40; i++) {
+  for (let i = 0; i < 80; i++) {
     await new Promise((r) => setTimeout(r, 3_000));
-    const { order: o } = await api<{ order: { status: string; error?: string } }>(`/api/orders/${order.id}`);
-    if (o.status === "filled") return note("Filled. It's in your wallet.");
-    if (o.status === "refunded") return note("Couldn't fill it right now — your payment was sent back.");
+    const { order: o } = await api<{ order: { status: string; error?: string; result?: { refundRaw?: string } } }>(`/api/orders/${order.id}`);
+    if (o.status === "settling") note("Filled — sending it to your wallet…");
+    if (o.status === "filled") {
+      const part = Number(o.result?.refundRaw ?? 0) > 0;
+      return note(part ? "Filled, except one asset that couldn't fill right now. That part of your payment was sent back." : "Done. It's in your wallet.");
+    }
+    if (o.status === "refunded") return note("Couldn't fill it right now — it was all sent back to your wallet.");
     if (o.status === "failed" || o.status === "refused") return note(o.error ?? "The order didn't go through.");
   }
-  note("Still filling — check Wallet in a minute.");
+  note("Still working on it — check Wallet in a minute.");
 }
 
 export const BasketView = ({ basket, onBack, onLogin }: BasketViewProps) => {
@@ -173,7 +177,6 @@ export const BasketView = ({ basket, onBack, onLogin }: BasketViewProps) => {
     { label: "Value locked", value: basket.tvl },
     { label: "Holders", value: basket.holders.toLocaleString("en-US") },
     { label: "Created", value: basket.created },
-    { label: "Rebalances", value: basket.rebalance },
   ];
 
   return (
@@ -345,7 +348,7 @@ export const BasketView = ({ basket, onBack, onLogin }: BasketViewProps) => {
           {side === "buy" && (
             <div className="flex gap-[8px]">
               {/* While orders are capped (smoke-test phase) the chips stay inside the cap. */}
-              {(live && config && config.maxOrderUsd < 25 ? ["1", "2", "5"] : ["25", "100", "500", "1000"]).map((v) => {
+              {(live && config && config.maxOrderUsd < 25 ? ["1", "2", "5"] : ["25", "100", "500", "1000"]).filter((v) => !live || !config || Number(v) <= config.maxOrderUsd).map((v) => {
                 const shown = currency === "USDC" ? v : solPrice > 0 ? (Number(v) / solPrice).toPrecision(2) : String(Number(v) / 100);
                 return (
                   <Hover key={v} tag="div" from={{ scale: 1 }} to={{ scale: 1.06 }} config={HOVER} className="flex-1">
@@ -399,12 +402,14 @@ export const BasketView = ({ basket, onBack, onLogin }: BasketViewProps) => {
                   ["Price impact", impact === null ? "—" : `${impact < 0.01 ? "<0.01" : impact.toFixed(2)}%`],
                   ["Route", route ?? "Direct"],
                   ["Price freshness", quote.priceAgeSec === null ? "—" : `${quote.priceAgeSec}s old${quote.fresh ? "" : " — too old to trade"}`],
+                  ["Fee", quote.feeBps === 0 ? "None" : `${(quote.feeBps / 100).toFixed(1)}%${quote.fee > 0 ? ` · ${amountOf(quote.fee)} ${currency}` : ""}`],
+                  ["Network", quote.networkSol === null ? "—" : `~${quote.networkSol.toFixed(4)} SOL${quote.setupPaidBy === "buyer" ? ", opens this basket" : ""}`],
                 ]
               : [
                   ["Swaps", `${rows.length}, each price-limited`],
-                  ["Approvals", "2"],
                   ["Price freshness", "Under 2 minutes"],
-                  ["Network fee", "~0.0004 SOL"],
+                  ["Fee", side === "redeem" ? "None" : config ? `${(config.platformFeeBps / 100).toFixed(1)}%` : "0.5%"],
+                  ["Network", "Paid in SOL with the order"],
                 ]
             ).map(([k, v]) => (
               <div key={k} className="flex items-center justify-between gap-[12px]">

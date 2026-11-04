@@ -15,26 +15,18 @@ import { Change, GLASS, Reveal, Segmented } from "./ui";
 
 /**
  * Create — the basket builder, after the reference app's: pick up to 14 assets,
- * set their weights, choose how it rebalances and who can buy it, and see the
+ * set their weights, choose who can see it, and see the
  * $ASTRA it burns. The donut redraws as the weights move. Creating saves it on
  * the backend — its own ticker, page and live chart from that moment; its share
  * token is minted on chain with its first buy.
  */
 
-const REBALANCE: Record<"7d" | "30d" | "drift", string> = {
-  "7d": "Every 7 days",
-  "30d": "Every 30 days",
-  drift: "At 5% drift",
-};
-
 const MAX = 14;
-const BURN_PER_ASSET = 10_000;
 const SLICE = ["#6d8bff", "#d2bdff", "#ff8fc4", "#7dd3fc", "#a5b4fc", "#f0abfc", "#93c5fd", "#c4b5fd"];
 const HOVER = { tension: 320, friction: 22 } as const;
 
 type Filter = "all" | AssetKind;
-type Rebalance = "7d" | "30d" | "drift";
-type Access = "public" | "allowlist" | "private";
+type Access = "public" | "private";
 
 export interface CreateViewProps {
   content: AppContent;
@@ -54,7 +46,6 @@ export const CreateView = ({ content, onCreated, onLogin }: CreateViewProps) => 
     SOL: 20,
     BONK: 10,
   });
-  const [rebalance, setRebalance] = useState<Rebalance>("30d");
   const [access, setAccess] = useState<Access>("public");
 
   const picked = Object.keys(weights);
@@ -91,7 +82,6 @@ export const CreateView = ({ content, onCreated, onLogin }: CreateViewProps) => 
         body: {
           name,
           code,
-          rebalance: REBALANCE[rebalance],
           access: access === "public" ? "public" : "private",
           weights: picked.map((symbol) => ({ symbol, weight: weights[symbol] })),
         },
@@ -112,7 +102,7 @@ export const CreateView = ({ content, onCreated, onLogin }: CreateViewProps) => 
           Build a basket
         </h1>
         <p className="m-0 max-w-[620px] font-mulish text-[16px] leading-[1.5] text-white/60">
-          Pick up to 14 of {live ? content.assets.length : 133} listed assets, set the weights and how it rebalances. It gets its own
+          Pick up to 14 of {live ? content.assets.length : 39} listed assets and set the weights. It gets its own
           token, its own page and its own live chart.
         </p>
       </Reveal>
@@ -237,33 +227,15 @@ export const CreateView = ({ content, onCreated, onLogin }: CreateViewProps) => 
           </ul>
 
           <div className="flex flex-col gap-[12px] border-t border-white/[0.07] pt-[18px]">
-            <span className="font-mulish text-[14px] text-white/50">Rebalances</span>
-            <Segmented<Rebalance>
-              value={rebalance}
-              onChange={setRebalance}
-              options={[
-                { value: "7d", label: "Weekly" },
-                { value: "30d", label: "Monthly" },
-                { value: "drift", label: "At 5% drift" },
-              ]}
-            />
-            <span className="mt-[4px] font-mulish text-[14px] text-white/50">Who can buy it</span>
+            <span className="font-mulish text-[14px] text-white/50">Who can see it</span>
             <Segmented<Access>
               value={access}
               onChange={setAccess}
               options={[
-                { value: "public", label: "Everyone" },
-                { value: "allowlist", label: "Allowlist" },
-                { value: "private", label: "Only me" },
+                { value: "public", label: "Listed for everyone" },
+                { value: "private", label: "Only with the link" },
               ]}
             />
-          </div>
-
-          <div className="flex items-center justify-between rounded-[16px] border border-signal-ring/25 bg-signal-glow/[0.07] px-[16px] py-[14px] font-mulish text-[14px]">
-            <span className="text-white/70">$ASTRA burned at creation</span>
-            <span className="font-mono text-[16px] text-signal-ring">
-              {(picked.length * BURN_PER_ASSET).toLocaleString("en-US")}
-            </span>
           </div>
 
           <FancyButton size="lg" full onClick={() => void create()}>

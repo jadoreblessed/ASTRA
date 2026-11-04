@@ -3,7 +3,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 
 import { registerIcons } from "@/components/common/asset-logo";
-import { api, resumeDeposits, session, type ApiConfig, type ApiPosition, type ApiStats, type ApiUser } from "@/lib/astra-api";
+import { api, resumeDeposits, session, type ApiConfig, type ApiOrder, type ApiPosition, type ApiStats, type ApiUser } from "@/lib/astra-api";
 import type { AppContent, AppStat, Asset, Basket } from "@/data/mocks/app";
 
 /**
@@ -24,6 +24,7 @@ interface AppData {
   config: ApiConfig | null;
   user: ApiUser | null;
   positions: ApiPosition[];
+  orders: ApiOrder[];
   asset: (symbol: string) => Asset | undefined;
   login: (token: string) => Promise<void>;
   logout: () => Promise<void>;
@@ -59,6 +60,7 @@ export const AppDataProvider = ({ initial, children }: { initial: AppContent; ch
   const [config, setConfig] = useState<ApiConfig | null>(null);
   const [user, setUser] = useState<ApiUser | null>(null);
   const [positions, setPositions] = useState<ApiPosition[]>([]);
+  const [orders, setOrders] = useState<ApiOrder[]>([]);
 
   const refresh = useCallback(async () => {
     try {
@@ -90,9 +92,10 @@ export const AppDataProvider = ({ initial, children }: { initial: AppContent; ch
       return;
     }
     try {
-      const me = await api<{ user: ApiUser; positions: ApiPosition[] }>("/api/me");
+      const me = await api<{ user: ApiUser; positions: ApiPosition[]; orders: ApiOrder[] }>("/api/me");
       setUser(me.user);
       setPositions(me.positions);
+      setOrders(me.orders);
       // A payment a previous visit signed but never saw confirmed.
       void resumeDeposits();
     } catch {
@@ -131,8 +134,8 @@ export const AppDataProvider = ({ initial, children }: { initial: AppContent; ch
   const asset = useCallback((s: string) => bySymbol.get(s), [bySymbol]);
 
   const value = useMemo<AppData>(
-    () => ({ content, live, config, user, positions, asset, login, logout, refresh: async () => { await refresh(); await loadMe(); }, addBasket }),
-    [content, live, config, user, positions, asset, login, logout, refresh, loadMe, addBasket],
+    () => ({ content, live, config, user, positions, orders, asset, login, logout, refresh: async () => { await refresh(); await loadMe(); }, addBasket }),
+    [content, live, config, user, positions, orders, asset, login, logout, refresh, loadMe, addBasket],
   );
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;

@@ -31,6 +31,13 @@ const every = (ms: number, name: string, fn: () => Promise<unknown>) => {
   return setInterval(run, ms);
 };
 
+/** Everything owed to a user keeps being tried until it lands, restart or not. */
+async function processPayouts(): Promise<void> {
+  const r = await signer<{ sent: number; left: number }>("/payouts", {});
+  if (!r.ok) log.warn({ code: r.code, error: r.error }, "payout pass failed");
+  else if (r.result.left > 0) log.info(r.result, "payouts still waiting");
+}
+
 async function processOrders(): Promise<void> {
   if (!config.TRADING_ENABLED) return;
   // An order caught mid-execution by a crash is never retried blind — it is
@@ -61,6 +68,7 @@ export async function startWorker(): Promise<void> {
   });
   every(30_000, "history", () => backfillHistory(10));
   every(5_000, "orders", processOrders);
+  every(30_000, "payouts", processPayouts);
   every(15 * 60_000, "sweep", sweepExpired);
 }
 

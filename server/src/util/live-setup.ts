@@ -49,6 +49,7 @@ console.log(`Wrote ${file}
 
 Next:
   1. Back up the MASTER_KEY line from that file (password manager).
-  2. npm run dev:live
-  3. Open http://localhost:8080/api/config — "vault" is the address to fund.
-     Send it 0.04 SOL for fees and rent. Nothing else goes there by hand.`);
+  2. npm run vault:export:live, and add its VAULT_SEALED line to that file too.
+  3. npm run dev:live
+  4. Open http://localhost:8080/api/config — "vault" is the address to fund.
+     Send it 0.05 SOL. Nothing else goes there by hand.`);

@@ -1,12 +1,36 @@
 ---
 tags: [meta, decision]
-updated: 2026-07-15
+updated: 2026-11-04
 ---
 
 # Decisions Log (ADRs)
 
 Architecture Decision Records. Each entry captures a choice, its context, and its
 consequences. Use [[templates/adr-note]] for new entries. Newest first.
+
+---
+
+## ADR-0045 — The platform pays once; the buyer pays the network; plain Ubuntu, no Docker
+
+- **Status:** Accepted
+- **Date:** 2026-11-04
+
+**Context.** The owner's limit is 0.05 SOL for the whole program, with no custom
+on-chain program. Paying every buyer's fees and rent from the vault would use that up
+within a few dozen orders. Docker Desktop doesn't start on the owner's machine, and
+the owner said to do without it.
+
+**Decision.** The vault gets 0.05 SOL once. Each order carries its own network fee in
+the buyer's transaction, credited to `spend_ledger`; the cap applies to the net. The
+platform pays only the shared setup of curated baskets, while the budget covers it.
+Commission is 0.5% on buys and sells, none on redeems. Rebalancing is not offered,
+since it would spend SOL forever. The server runs on systemd, set up by
+`deploy/setup.sh`.
+
+**Consequences.** Order volume no longer draws down the budget, and the first buyer
+of a basket pays its setup once the budget is gone. Baskets hold fixed weights. The
+deploy has no image to build, and secrets live in `/etc/astra/astra.env`, created once
+and never replaced because `MASTER_KEY` opens the vault.
 
 ---
 

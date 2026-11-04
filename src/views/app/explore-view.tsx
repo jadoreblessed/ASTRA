@@ -262,7 +262,7 @@ export const ExploreView = ({ content, onOpen, onCreate, onAssets }: ExploreView
                 });
               }}
               aria-label={links.ca ? `Copy contract address ${links.ca}` : "Contract address coming soon"}
-              className="flex h-[46px] items-center gap-[12px] rounded-full border border-white/[0.08] bg-white/[0.04] px-[18px] enabled:cursor-pointer enabled:hover:border-[#ff5fa8]/50"
+              className="flex h-[46px] items-center gap-[12px] rounded-full border border-white/[0.08] bg-white/[0.04] px-[18px] enabled:cursor-pointer enabled:hover:border-signal-glow/50"
             >
               <span className="size-[7px] rounded-full bg-signal-glow" />
               <span className="font-mulish text-[14px] tracking-[0.1em] text-accent-300">{content.token.caLabel}</span>
@@ -271,9 +271,13 @@ export const ExploreView = ({ content, onOpen, onCreate, onAssets }: ExploreView
                 {copied ? "Copied" : links.ca ? `${links.ca.slice(0, 4)}…${links.ca.slice(-4)}` : content.token.ca}
               </span>
             </button>
-            <FancyButton variant="primary">
-              Buy at launch
-            </FancyButton>
+            {links.ca ? (
+              <FancyButton variant="primary" href={`https://jup.ag/swap/SOL-${links.ca}`}>
+                Buy $ASTRA
+              </FancyButton>
+            ) : (
+              <FancyButton variant="primary">Buy at launch</FancyButton>
+            )}
           </div>
         </section>
       </Reveal>

@@ -23,9 +23,18 @@ export async function seed(): Promise<void> {
     await query(
       `INSERT INTO baskets (id, code, name, description, rebalance, curated, created_at)
        VALUES ($1, $2, $3, $4, $5, true, now() - interval '90 days')
-       ON CONFLICT (id) DO NOTHING`,
+       ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name, description = EXCLUDED.description`,
       [b.id, b.code, b.name, b.description, b.rebalance],
     );
+    // Nobody holds it yet: its mix follows the catalog, and its units get fixed afresh.
+    const { rows: held } = await query<{ symbol: string }>(
+      `SELECT h.symbol FROM basket_holdings h JOIN baskets k ON k.id = h.basket_id WHERE h.basket_id = $1 AND k.share_mint IS NULL AND k.shares_raw = 0`,
+      [b.id],
+    );
+    const symbols = Object.keys(b.weights);
+    if (held.some((h) => !symbols.includes(h.symbol))) {
+      await query(`DELETE FROM basket_holdings WHERE basket_id = $1`, [b.id]);
+    }
     for (const [symbol, pct] of Object.entries(b.weights)) {
       await query(
         `INSERT INTO basket_holdings (basket_id, symbol, weight_bps, units)

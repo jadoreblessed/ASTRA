@@ -32,7 +32,8 @@ export const siteConfig = {
     (vercelProduction ? `https://${vercelProduction}` : "http://localhost:3000"),
   /** Default Open Graph / Twitter share image (path under `public/`). */
   ogImage: "/open-graph.png",
-  twitterHandle: "@astra",
+  /** The X handle for share cards, e.g. "@yourhandle". Unset until the account is decided. */
+  twitterHandle: process.env.NEXT_PUBLIC_X_HANDLE ?? "",
   author: "Astra Labs",
   /**
    * Copyright, in one place. Read by the JSON-LD `WebSite` node and by the
