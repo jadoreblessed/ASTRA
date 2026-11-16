@@ -13,7 +13,17 @@ DOMAIN="${1:-}"
 X_HANDLE="${2:-}"
 if [ -z "$DOMAIN" ]; then
   echo "Usage: sudo bash deploy/setup.sh yourdomain.com [x_handle]" >&2
+  echo "   or: sudo bash deploy/setup.sh 1.2.3.4 [x_handle]   (plain http until there's a domain)" >&2
   exit 1
+fi
+DOMAIN="${DOMAIN#https://}"
+DOMAIN="${DOMAIN#http://}"
+DOMAIN="${DOMAIN%/}"
+# A bare IP can't get a certificate, so it's served over plain http. A domain gets HTTPS.
+if [[ "$DOMAIN" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+  SITE_URL="http://$DOMAIN"
+else
+  SITE_URL="https://$DOMAIN"
 fi
 
 export DEBIAN_FRONTEND=noninteractive
@@ -88,9 +98,9 @@ EOF
   chmod 640 "$ENV_FILE"
 fi
 
-set_env CORS_ORIGINS "https://$DOMAIN"
+set_env CORS_ORIGINS "$SITE_URL"
 set_env MAIL_FROM "ASTRA <login@$DOMAIN>"
-set_env NEXT_PUBLIC_SITE_URL "https://$DOMAIN"
+set_env NEXT_PUBLIC_SITE_URL "$SITE_URL"
 # Empty on purpose: the site and the API share one address.
 set_env NEXT_PUBLIC_API_URL ""
 if [ -n "$X_HANDLE" ] || ! grep -q '^NEXT_PUBLIC_X_HANDLE=' "$ENV_FILE"; then
@@ -166,7 +176,7 @@ systemctl restart astra-signer astra-api astra-worker astra-web
 systemctl start astra.target
 
 cat > /etc/caddy/Caddyfile <<EOF
-$DOMAIN {
+$SITE_URL {
 	encode zstd gzip
 
 	# The contact form belongs to the site, the rest of /api to the backend.
@@ -202,7 +212,7 @@ VAULT="$(curl -fs http://127.0.0.1:8080/api/config | node -e 'let s="";process.s
 
 cat <<EOF
 
-ASTRA is up: https://$DOMAIN
+ASTRA is up: $SITE_URL
 Trading is OFF. Nobody can buy yet.
 
 Vault address: $VAULT
