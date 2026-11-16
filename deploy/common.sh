@@ -38,7 +38,13 @@ build_all() {
   # The env file says production, and npm would then skip the compiler, so build with NODE_ENV cleared.
   as_astra "$APP_DIR/server" "NODE_ENV= npm ci --no-audit --no-fund && NODE_ENV= npm run build && npm prune --omit=dev --no-audit --no-fund"
   echo "==> Building the site"
-  as_astra "$APP_DIR" "NODE_ENV= npm ci --no-audit --no-fund && NEXT_TELEMETRY_DISABLED=1 NODE_ENV=production npx next build"
+  as_astra "$APP_DIR" "NODE_ENV= npm ci --no-audit --no-fund"
+  # The build downloads the fonts from Google, and one dropped download fails it: try twice.
+  if ! as_astra "$APP_DIR" "NEXT_TELEMETRY_DISABLED=1 NODE_ENV=production npx next build"; then
+    echo "==> The site build failed, trying once more"
+    sleep 5
+    as_astra "$APP_DIR" "NEXT_TELEMETRY_DISABLED=1 NODE_ENV=production npx next build"
+  fi
 }
 
 wait_for_health() {
