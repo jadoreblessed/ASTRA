@@ -6,7 +6,7 @@ import { useSyncExternalStore } from "react";
  * `false` through the server render, hydration and until the browser reports
  * that the served HTML has been **presented** (a `paint` timing entry); `true`
  * from then on. What a first screen served at rest under the loader's curtain
- * switches on (`hero.tsx`, `loader-curtain.tsx`).
+ * switches on (`robot-spring.tsx` and the text animations).
  *
  * Not "hydrated": under load, hydration (and even two animation frames) can
  * run before the first frame goes out — the copy would then switch to its

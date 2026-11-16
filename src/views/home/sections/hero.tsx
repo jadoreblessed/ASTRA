@@ -24,11 +24,11 @@ import type { HeroContent } from "@/data/mocks/home";
  * centred vertical stack — masthead, the orbiting token, subtitle, action pill —
  * sized for a phone rather than shrunk to nothing.
  *
- * Both layouts fade in on the preloader's `isLoaded` via staggered `<Spring>`s
+ * Both layouts fade in on `isLoaded` (set at hydration) via staggered `<Spring>`s
  * and drift out on `useSceneFade`; the live vortex shows through behind them.
  */
 
-/** Matches the preloader's pause before unhiding the hero. */
+/** A beat after hydration before the hero starts to appear. */
 const REVEAL_BASE_DELAY = 150;
 const REVEAL = { duration: 1400, easing: easeReveal } as const;
 
@@ -75,7 +75,6 @@ const HeroDesktop = ({ content }: HeroProps) => {
           <AnimatedHeading
             tag="h1"
             enabled={isLoaded}
-            restUntilHydrated
             baseDelay={delay(150)}
             className="absolute top-[100px] left-[389px] m-0 w-[663px] text-center font-mulish text-[56px] leading-none font-light"
             lines={[
@@ -88,7 +87,6 @@ const HeroDesktop = ({ content }: HeroProps) => {
           <Spring
             tag="div"
             enabled={isLoaded}
-            restUntilHydrated
             from={{ opacity: 0, scale: 0.7, filter: "blur(14px)" }}
             to={{ opacity: 1, scale: 1, filter: "blur(0px)" }}
             delayIn={delay(300)}
@@ -104,7 +102,6 @@ const HeroDesktop = ({ content }: HeroProps) => {
 
           <AnimatedText
             enabled={isLoaded}
-            restUntilHydrated
             delayIn={delay(500)}
             className="absolute top-[618px] left-[490px] m-0 w-[460px] text-center font-mulish text-[17px] leading-[1.35] font-normal text-white/85"
           >
@@ -114,7 +111,6 @@ const HeroDesktop = ({ content }: HeroProps) => {
           <Spring
             tag="div"
             enabled={isLoaded}
-            restUntilHydrated
             from={{ opacity: 0, y: 24, filter: "blur(8px)" }}
             to={{ opacity: 1, y: 0, filter: "blur(0px)" }}
             delayIn={delay(650)}
@@ -153,7 +149,6 @@ const HeroMobile = ({ content }: HeroProps) => {
           <AnimatedHeading
             tag="h1"
             enabled={isLoaded}
-            restUntilHydrated
             baseDelay={delay(150)}
             stagger={34}
             className="m-0 w-full text-center font-mulish text-[clamp(26px,7vw,44px)] leading-[1.06] font-light"
@@ -166,7 +161,6 @@ const HeroMobile = ({ content }: HeroProps) => {
           <Spring
             tag="div"
             enabled={isLoaded}
-            restUntilHydrated
             from={{ opacity: 0, scale: 0.7, filter: "blur(12px)" }}
             to={{ opacity: 1, scale: 1, filter: "blur(0px)" }}
             delayIn={delay(300)}
@@ -183,7 +177,6 @@ const HeroMobile = ({ content }: HeroProps) => {
 
           <AnimatedText
             enabled={isLoaded}
-            restUntilHydrated
             delayIn={delay(500)}
             className="m-0 max-w-[400px] text-center font-mulish text-[15px] leading-[1.4] font-normal text-white/85"
           >
@@ -193,7 +186,6 @@ const HeroMobile = ({ content }: HeroProps) => {
           <Spring
             tag="div"
             enabled={isLoaded}
-            restUntilHydrated
             from={{ opacity: 0, y: 24, filter: "blur(8px)" }}
             to={{ opacity: 1, y: 0, filter: "blur(0px)" }}
             delayIn={delay(650)}

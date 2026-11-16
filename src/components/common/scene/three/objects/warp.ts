@@ -305,6 +305,11 @@ class Warp {
     });
   }
 
+  /** Leaves at once, never drawn: the site has no loading screen. */
+  skip() {
+    if (this.state.alive) this.dispose();
+  }
+
   private dispose() {
     this.camera.remove(this.mesh);
     this.geometry.dispose();

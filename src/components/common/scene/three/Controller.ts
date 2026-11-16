@@ -691,11 +691,8 @@ class Controller {
   render() {
     const isLoaded = scrollState.activeScreen !== screens.NONE;
 
-    /* Preloader: the warp runs until the first scroll state arrives, then the
-     * streaks stretch out, the field fades, and the object leaves the scene. */
-    if (this.preloader.state.alive) {
-      this.preloader.render(isLoaded ? { destroy: true } : {});
-    }
+    /* No loading screen: the warp tunnel leaves the scene before it's ever drawn. */
+    if (this.preloader.state.alive) this.preloader.skip();
 
     /* The entrance is armed when the preloader clears, not at construction: it
      * owns the screen for several seconds, and a galaxy igniting behind it would

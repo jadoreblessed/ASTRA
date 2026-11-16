@@ -1,6 +1,6 @@
 ---
 tags: [meta, performance, seo, history]
-updated: 2026-10-06
+updated: 2026-11-16
 ---
 
 # Optimization history — Helion
@@ -41,7 +41,7 @@ not duplicates. Last updated 2026-10-06.
 | three.js is a **static** import in `scene.tsx` | dynamic import tried twice — slower or no gain (see below) | `components/common/scene/scene.tsx` |
 | **Served device forms** — `src/proxy.ts` rewrites `/` **and the section deep links** by UA to prerendered `/view/mobile`, `/view/robot`, `/view/robot-mobile`; `robots.txt` disallows `/view/`; every form stays static | phones no longer hydrate the desktop composition then rebuild the mobile one; robots get no warp loader anywhere (D-016, D-028) | `src/proxy.ts`, `src/lib/page-forms.ts`, `src/app/view/[form]/…`, `src/utils/mobile-ua.ts`, `src/utils/bot-ua.ts` |
 | `useIsMobile` answers with the **server hint** during SSR/hydration | ~0.25 s sync re-render on phones removed (part of 66 → 76) | `components/common/device-hint.tsx`, `src/hooks/use-is-mobile.ts` |
-| **Hero served at rest under an opaque loader curtain**, switched after a reported paint (2 s backstop); entrance plays when the warp ends | LCP lands at first paint: 4.75 → 3.47 s | `components/common/scene/loader-curtain.tsx`, `loader-readout.tsx`, `src/hooks/use-hydrated.ts`, `restUntilHydrated` on `robot-spring` / `robot-text` / `AnimatedHeading` |
+| ~~**Hero served at rest under an opaque loader curtain**, switched after a reported paint (2 s backstop); entrance plays when the warp ends~~ **Removed 2026-11-16 with the loading screen, at the owner's request:** no warp, no curtain, the hero is served at its start pose and plays its entrance at hydration | LCP lands at first paint: 4.75 → 3.47 s. Now LCP is hydration + the entrance, without the 1.8 s warp; measure before bringing the curtain back | `components/common/scene/loader-curtain.tsx`, `loader-readout.tsx`, `src/hooks/use-hydrated.ts`, `restUntilHydrated` on `robot-spring` / `robot-text` / `AnimatedHeading` |
 | Robot form: `RobotScene` galaxy still instead of WebGL, marks `isLoaded`; springs → `robot-spring`, `Inview` → `robot-inview`, text engines → `robot-text` (flex row, engine alignment as `text-align`) | D-016; robot PC 74 → 100, mobile 42 → 90+ | `components/common/scene/robot-scene.tsx`, `components/common/robot-*.tsx` |
 | AI crawlers (GPTBot, ClaudeBot, PerplexityBot + 14) in the bot list | non-JS crawlers on the people form read streamed copy in `hidden` segments (fleet fix 2026-10-02) | `src/utils/bot-ua.ts` |
 | `AnimatedHeading`: **one spring clock per heading**; letters are plain spans at the start pose until first enabled (latched); resting letters on the robot form | hundreds of per-letter springs at hydration: mobile 52 → 60 (TBT 1,814 → 969); robot TBT 1,031 → 21 ms; one clock: 90 → 92 | `components/animation/animated-heading.tsx` |

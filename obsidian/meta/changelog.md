@@ -1,12 +1,25 @@
 ---
 tags: [meta, changelog]
-updated: 2026-11-04
+updated: 2026-11-16
 ---
 
 # Changelog
 
 Chronological log of notable changes to the project. Newest first.
 This is a human-curated log — not a mirror of `git log`.
+
+## 2026-11-16 — no loading screen; live on the server by IP
+
+The owner: "убери экран загрузки".
+
+- **Loading screen removed:** no warp tunnel, no 0-100 % readout, no curtain. The
+  scene marks the page loaded the moment it mounts, the warp leaves the camera on
+  the first frame (`Warp.skip`), and the hero plays its entrance at hydration while
+  the galaxy fades in behind it. `loader-curtain.tsx` and `loader-readout.tsx` are
+  gone. See the struck row in `optimization-history.md`.
+- **Server:** BUREAU taken off 2.27.200.154 (archived first) and ASTRA deployed
+  there with `deploy/setup.sh`, which now takes a bare IP and serves plain http
+  until there's a domain.
 
 ## 2026-11-04 — the backend, ready for a server (ADR-0045)
 

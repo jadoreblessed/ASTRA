@@ -1,11 +1,9 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import { animated, useSpring } from "@react-spring/web";
+import { useEffect, useRef } from "react";
+import { animated } from "@react-spring/web";
 
 import Canvas from "./three";
-import { events } from "./three/constants";
-import { LoaderReadout } from "./loader-readout";
 import { subscribeToTicker } from "@/lib/animation/ticker";
 import { subscribeMouse } from "@/lib/scene/mouse";
 import { frameBudgetMs, sceneShouldFreeze } from "@/lib/scene/device";
@@ -14,9 +12,6 @@ import { useSceneConfig } from "@/lib/scene/scene-config";
 import { useSections } from "@/hooks/sections/use-sections";
 import { useSceneVisibility } from "@/hooks/sections/use-scene-visibility";
 
-/** Loader percentage above which the scene is considered ready. */
-const LOADED_AT = 98;
-
 /**
  * How long after the loader hands off to keep drawing before freezing, when the
  * scene is in its reduced-motion / energy-saver path. Long enough for the galaxy
@@ -24,11 +19,6 @@ const LOADED_AT = 98;
  * after the entrance.
  */
 const FREEZE_SETTLE_MS = 900;
-
-/** The preloader emits a rounded integer. */
-interface LoadingEventDetail {
-  percent: number | string;
-}
 
 /**
  * The persistent WebGL backdrop.
@@ -47,7 +37,6 @@ interface LoadingEventDetail {
  * scroll invalidates the WebGL composite on WebKit and the whole scene flickers.
  */
 export const Scene = () => {
-  const [percent, setPercent] = useState(0);
   const parentRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   /* Read inside the ticker closure to know when the loader has handed off, so the
@@ -56,28 +45,8 @@ export const Scene = () => {
   const loadedRef = useRef(false);
   const visibility = useSceneVisibility();
 
-  /* The load rail. The preloader emits whole percents, so the raw value steps —
-   * the spring is what turns those steps back into a rail that fills. Scale, not
-   * width: it composites instead of laying the bar out again ten times a second. */
-  const rail = useSpring({
-    transform: `scaleX(${percent / 100})`,
-    config: { tension: 180, friction: 30 },
-  });
-
-  const isLoaded = useSections((state) => state.isLoaded);
   const setIsLoaded = useSections((state) => state.setIsLoaded);
 
-  /* Fade the load readout out rather than yanking it: a hard unmount at the
-   * instant the bar completes flashed the (near-full, glowing) rail for a frame
-   * as a horizontal stripe. Fade to nothing, then drop it from the tree. */
-  const [loaderGone, setLoaderGone] = useState(false);
-  const loaderFade = useSpring({
-    opacity: isLoaded ? 0 : 1,
-    config: { tension: 210, friction: 30 },
-    onRest: () => {
-      if (isLoaded) setLoaderGone(true);
-    },
-  });
   // Bumped by the dev panel's "Apply" — remounts the scene so its objects
   // re-read the tuned palette at construction.
   const paletteVersion = useSceneConfig((state) => state.paletteVersion);
@@ -125,26 +94,12 @@ export const Scene = () => {
       () => budget,
     );
 
-    const markLoaded = () => {
-      loadedRef.current = true;
-      setIsLoaded(true);
-    };
-
-    const onLoading = (event: Event) => {
-      const detail = (event as CustomEvent<LoadingEventDetail>).detail;
-      const percent = Number(detail.percent);
-      if (Number.isNaN(percent)) return;
-      setPercent(percent);
-      if (percent > LOADED_AT) markLoaded();
-    };
-    const onLoaderDestroy = () => markLoaded();
-
-    document.addEventListener(events.LOADING, onLoading);
-    document.addEventListener(events.LOADER_DESTROY, onLoaderDestroy);
+    /* No loading screen: the page is ready the moment it hydrates. The hero
+     * plays its entrance now and the galaxy fades in behind it as it builds. */
+    loadedRef.current = true;
+    setIsLoaded(true);
 
     return () => {
-      document.removeEventListener(events.LOADING, onLoading);
-      document.removeEventListener(events.LOADER_DESTROY, onLoaderDestroy);
       unsubscribeTicker();
       unsubscribeMouse();
       clearTimeout(start);
@@ -166,11 +121,6 @@ export const Scene = () => {
       {/* Vignette: darkens the top band for header readability and the bottom
           for CTA contrast. Inside this wrapper so it fades with the canvas. */}
       <div className="scene-overlay" aria-hidden="true" />
-      {/* The load readout (`LoaderReadout` — the served HTML's curtain draws
-          the same one at 0 % until hydration). */}
-      {!loaderGone && (
-        <LoaderReadout percent={percent} rail={rail} style={loaderFade} />
-      )}
     </animated.div>
   );
 };

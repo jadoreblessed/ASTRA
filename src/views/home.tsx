@@ -3,7 +3,6 @@ import { Suspense } from "react";
 import { RobotProvider, RobotView } from "@/components/common/robot-view";
 import { HydrateNear } from "@/components/common/hydrate-near";
 import { MobileHintProvider } from "@/components/common/device-hint";
-import { LoaderCurtain } from "@/components/common/scene/loader-curtain";
 import { Scene } from "@/components/common/scene/scene";
 import { RobotScene } from "@/components/common/scene/robot-scene";
 import { SectionController } from "@/components/common/sections/section-controller";
@@ -123,9 +122,6 @@ export const HomeView = ({
           </Slide>
         </main>
 
-        {/* People only: the first screen is served at rest under this opaque
-          curtain and switches to its entrance's start pose at hydration. */}
-        {!robot && <LoaderCurtain />}
       </MobileHintProvider>
     </RobotProvider>
   );
