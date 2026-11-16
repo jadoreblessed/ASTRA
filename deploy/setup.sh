@@ -188,6 +188,19 @@ $SITE_URL {
 	reverse_proxy 127.0.0.1:3000
 }
 EOF
+# www goes to the bare domain, when the www record exists (else its certificate can't be issued).
+case "$SITE_URL" in
+  https://*)
+    if getent ahostsv4 "www.$DOMAIN" > /dev/null; then
+      cat >> /etc/caddy/Caddyfile <<EOF
+
+www.$DOMAIN {
+	redir https://$DOMAIN{uri} permanent
+}
+EOF
+    fi
+    ;;
+esac
 systemctl enable caddy > /dev/null 2>&1
 systemctl restart caddy
 
