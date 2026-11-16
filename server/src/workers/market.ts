@@ -106,6 +106,7 @@ export async function backfillHistory(limit = 12): Promise<number> {
       WHERE a.listed AND a.mint IS NOT NULL
         AND (SELECT count(*) FROM asset_daily d WHERE d.symbol = a.symbol) < 20
         AND COALESCE((SELECT value FROM kv WHERE key = 'backfill_failed:' || a.symbol)::timestamptz, 'epoch') < now() - interval '6 hours'
+        AND COALESCE((SELECT value FROM kv WHERE key = 'history_short:' || a.symbol)::timestamptz, 'epoch') < now() - interval '24 hours'
       ORDER BY EXISTS (SELECT 1 FROM basket_holdings h WHERE h.symbol = a.symbol) DESC, a.mcap DESC NULLS LAST
       LIMIT $1`,
     [limit],
@@ -120,6 +121,14 @@ export async function backfillHistory(limit = 12): Promise<number> {
           `INSERT INTO asset_daily (symbol, day, close) VALUES ($1, to_timestamp($2)::date, $3)
            ON CONFLICT (symbol, day) DO NOTHING`,
           [r.symbol, ts, close],
+        );
+      }
+      // A young token has fewer days than we ask for. That's all there is: say so, so
+      // nobody waits for more and this isn't fetched again every round.
+      if (closes.length < 20) {
+        await query(
+          `INSERT INTO kv (key, value) VALUES ($1, now()::text) ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = now()`,
+          [`history_short:${r.symbol}`],
         );
       }
       done++;

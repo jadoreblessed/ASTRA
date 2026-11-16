@@ -78,7 +78,7 @@ export async function settleUnits(): Promise<void> {
         `SELECT a.symbol FROM assets a
           WHERE a.symbol = ANY($1)
             AND (SELECT count(*) FROM asset_daily d WHERE d.symbol = a.symbol) < 20
-            AND NOT EXISTS (SELECT 1 FROM kv WHERE kv.key = 'backfill_failed:' || a.symbol)`,
+            AND NOT EXISTS (SELECT 1 FROM kv WHERE kv.key IN ('backfill_failed:' || a.symbol, 'history_short:' || a.symbol))`,
         [live.map((w) => w.symbol)],
       );
       if (waiting.rows.length > 0) continue;
@@ -94,10 +94,9 @@ export async function settleUnits(): Promise<void> {
           [anchor.rows[0].day, live.map((w) => w.symbol)],
         );
         priceAt = Object.fromEntries(closes.rows.map((c) => [c.symbol, c.close]));
-      } else {
-        // No history yet — wait for the backfill rather than anchor on today.
-        continue;
       }
+      // No day every holding shares (a token with no pool has no history at all):
+      // nothing more is coming, so the basket starts from today's prices.
     }
 
     const units = unitsFor(live, priceAt, b.base_nav);

@@ -657,3 +657,29 @@ test("buyback spends the commission on the CA and burns it", async () => {
   assert.equal(await fees(), 0n);
   assert.equal((await one<{ n: number }>(`SELECT count(*)::int AS n FROM burns`))!.n, 1);
 });
+
+/* ------------------------------------------------------------- basket units */
+
+test("a basket holding a token younger than its history window still gets priced", async () => {
+  const { settleUnits } = await import("../src/services/seed.ts");
+  await query(`UPDATE assets SET synced_at = now() WHERE symbol IN ('AAA', 'BBB')`);
+  await query(`INSERT INTO baskets (id, code, name, curated) VALUES ('young', 'YOUNG', 'young', true)`);
+  await query(`INSERT INTO basket_holdings (basket_id, symbol, weight_bps, units) VALUES ('young', 'AAA', 5000, 0), ('young', 'BBB', 5000, 0)`);
+  // AAA has a month of closes; BBB only started trading 12 days ago.
+  for (let d = 30; d >= 1; d--) {
+    await query(`INSERT INTO asset_daily (symbol, day, close) VALUES ('AAA', current_date - $1::int, 10) ON CONFLICT DO NOTHING`, [d]);
+    if (d <= 12) await query(`INSERT INTO asset_daily (symbol, day, close) VALUES ('BBB', current_date - $1::int, $2) ON CONFLICT DO NOTHING`, [d, d === 12 ? 50 : 100]);
+  }
+  const units = async () =>
+    Object.fromEntries((await query<{ symbol: string; units: number }>(`SELECT symbol, units::float8 AS units FROM basket_holdings WHERE basket_id = 'young'`)).rows.map((r) => [r.symbol, r.units]));
+
+  await settleUnits();
+  assert.deepEqual(await units(), { AAA: 0, BBB: 0 }, "still waiting: BBB's history might be on its way");
+
+  // The backfill came back with everything there is.
+  await query(`INSERT INTO kv (key, value) VALUES ('history_short:BBB', now()::text)`);
+  await settleUnits();
+  // $100 a share on BBB's first day: $50 in AAA at $10, $50 in BBB at $50.
+  assert.deepEqual(await units(), { AAA: 5, BBB: 1 });
+  await query(`DELETE FROM kv WHERE key = 'history_short:BBB'`);
+});
